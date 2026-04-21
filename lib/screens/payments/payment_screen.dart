@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/models/profile.dart';
 import 'package:natproxy/services/profile_service.dart';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
@@ -42,8 +42,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _listenDeepLinks() {
-    _sub = uriLinkStream.listen((uri) {
-      if (uri == null) return;
+    final appLinks = AppLinks();
+    _sub = appLinks.uriLinkStream.listen((uri) {
       if (uri.scheme != 'natproxy') return;
       if (uri.host != 'payment-callback') return;
       _handlePaymentCallback(uri);
