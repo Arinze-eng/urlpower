@@ -56,7 +56,7 @@ class ProxyVpnService : VpnService() {
         val mtu = settings.optInt("mtu", 1500)
         val dns1 = settings.optString("dns1", "8.8.8.8")
         val dns2 = settings.optString("dns2", "1.1.1.1")
-        val vpnSessionName = settings.optString("vpnSessionName", "NATProxy")
+        val vpnSessionName = settings.optString("vpnSessionName", "CDN-NETSHARE")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -231,7 +231,7 @@ class ProxyVpnService : VpnService() {
             val channel =
                     NotificationChannel(
                                     CHANNEL_ID,
-                                    "NATProxy",
+                                    "CDN-NETSHARE",
                                     NotificationManager.IMPORTANCE_LOW
                             )
                             .apply {
@@ -283,7 +283,7 @@ class ProxyVpnService : VpnService() {
         }
 
         return builder
-            .setContentTitle("NATProxy VPN")
+            .setContentTitle("CDN-NETSHARE VPN")
             .setContentText("Routing traffic through tunnel")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)

@@ -118,7 +118,7 @@ class ServerForegroundService : Service() {
             val channel =
                 NotificationChannel(
                     CHANNEL_ID,
-                    "NATProxy",
+                    "CDN-NETSHARE",
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
                     description = "Connection status and controls"
@@ -169,7 +169,7 @@ class ServerForegroundService : Service() {
         }
 
         return builder
-            .setContentTitle("NATProxy Server")
+            .setContentTitle("CDN-NETSHARE Server")
             .setContentText("Sharing internet connection")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)

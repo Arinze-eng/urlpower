@@ -264,7 +264,6 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Client Settings'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.restore),

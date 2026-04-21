@@ -657,7 +657,6 @@ class _ClientScreenState extends State<ClientScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Connect'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),

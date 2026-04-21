@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:natproxy/auth/auth_gate.dart';
+import 'package:natproxy/config/app_theme.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/screens/account_screen.dart';
 import 'package:natproxy/screens/auth/sign_up_screen.dart';
@@ -21,11 +22,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NATProxy',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      title: 'CDN-NETSHARE',
+      theme: AppTheme.light(),
       home: const AuthGate(),
       routes: {
         '/sign-up': (context) => const SignUpScreen(),

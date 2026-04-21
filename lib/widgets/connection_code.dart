@@ -8,8 +8,10 @@ class ConnectionCodeDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+
     return Card(
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -17,15 +19,24 @@ class ConnectionCodeDisplay extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.key, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                const Text(
-                  'Connection Code',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.key_rounded, color: cs.primary),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.copy),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Connection Code',
+                    style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                IconButton.filledTonal(
+                  icon: const Icon(Icons.copy_rounded),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: code));
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -36,29 +47,27 @@ class ConnectionCodeDisplay extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cs.outlineVariant.withOpacity(0.7)),
               ),
               child: SelectableText(
                 code,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+                style: t.bodyMedium?.copyWith(
+                  fontFamily: 'monospace',
+                  height: 1.2,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
-              'Share this code with the client device',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
+              'Share this code with the client device.',
+              style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),
@@ -74,8 +83,10 @@ class ConnectionCodeInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+
     return Card(
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -83,24 +94,23 @@ class ConnectionCodeInput extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.key, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                const Text(
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.key_rounded, color: cs.primary),
+                ),
+                const SizedBox(width: 12),
+                Text(
                   'Connection Code',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: 'Paste connection code here',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.paste),
+                const Spacer(),
+                IconButton.filledTonal(
+                  icon: const Icon(Icons.paste_rounded),
                   onPressed: () async {
                     final data = await Clipboard.getData(Clipboard.kTextPlain);
                     if (data?.text != null) {
@@ -109,9 +119,16 @@ class ConnectionCodeInput extends StatelessWidget {
                   },
                   tooltip: 'Paste',
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'Paste connection code here',
               ),
               maxLines: 3,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+              style: t.bodyMedium?.copyWith(fontFamily: 'monospace', height: 1.2),
             ),
           ],
         ),

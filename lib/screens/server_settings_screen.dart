@@ -513,7 +513,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Server Settings'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.restore),

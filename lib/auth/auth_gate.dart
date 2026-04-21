@@ -56,7 +56,7 @@ class AuthGate extends StatelessWidget {
               return PaywallScreen(
                 title: 'Trial ended',
                 subtitle:
-                    'Your 5‑day trial has ended. Choose a plan to continue using NATProxy.',
+                    'Your 5‑day trial has ended. Choose a plan to continue using CDN-NETSHARE.',
                 showPlans: true,
               );
             }

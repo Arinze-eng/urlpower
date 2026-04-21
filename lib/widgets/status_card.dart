@@ -16,8 +16,10 @@ class StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+
     return Card(
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -25,19 +27,42 @@ class StatusCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: color, size: 32),
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: color.withOpacity(0.28)),
+                  ),
+                  child: Icon(icon, color: color),
+                ),
                 const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                Expanded(
+                  child: Text(
+                    title,
+                    style: t.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: cs.onSurface,
+                    ),
                   ),
                 ),
               ],
             ),
-            if (children.isNotEmpty) ...[const Divider(), ...children],
+            if (children.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Divider(height: 1, color: cs.outlineVariant.withOpacity(0.7)),
+              const SizedBox(height: 12),
+              ...children.map(
+                (w) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: DefaultTextStyle(
+                    style: t.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
+                    child: w,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

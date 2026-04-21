@@ -678,7 +678,6 @@ class _ServerScreenState extends State<ServerScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Share Internet'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),

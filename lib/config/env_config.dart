@@ -23,5 +23,5 @@ abstract final class EnvConfig {
   static const String CLIENT_DNS2 = '1.1.1.1';
   static const bool CLIENT_ALLOW_DIRECT_DNS = false;
   static const bool CLIENT_DISCOVERY_ENABLED = true;
-  static const String VPN_SESSION_NAME = 'NATProxy';
+  static const String VPN_SESSION_NAME = 'CDN-NETSHARE';
 }

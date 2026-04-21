@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/screens/payments/payment_screen.dart';
+import 'package:natproxy/widgets/gradient_header.dart';
 
 class PaywallScreen extends StatelessWidget {
   final String title;
@@ -16,6 +17,9 @@ class PaywallScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -23,62 +27,72 @@ class PaywallScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                      Theme.of(context).colorScheme.tertiary.withOpacity(0.10),
-                    ],
-                  ),
-                  border: Border.all(color: Colors.black12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: Colors.black54),
-                      ),
-                      const SizedBox(height: 20),
-                      if (showPlans) ...[
-                        FilledButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const PaymentScreen()),
-                            );
-                          },
-                          icon: const Icon(Icons.lock_open),
-                          label: const Text('Choose a plan'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GradientHeader(
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 54,
+                          width: 54,
+                          decoration: BoxDecoration(
+                            color: cs.primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Icon(Icons.lock_outline, color: cs.primary),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 4),
+                              Text(subtitle, style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
                       ],
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          await SupabaseConfig.client.auth.signOut();
-                        },
-                        icon: const Icon(Icons.logout),
-                        label: const Text('Back to sign in'),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showPlans) ...[
+                            FilledButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const PaymentScreen()),
+                                );
+                              },
+                              icon: const Icon(Icons.workspace_premium_outlined),
+                              label: const Text('Choose a plan'),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              await SupabaseConfig.client.auth.signOut();
+                            },
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text('Back to sign in'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Tip: If you just signed up, make sure you verified your email first.',
+                    textAlign: TextAlign.center,
+                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  )
+                ],
               ),
             ),
           ),

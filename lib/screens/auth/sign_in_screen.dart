@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:natproxy/config/supabase_config.dart';
+import 'package:natproxy/services/auth_helpers.dart';
+import 'package:natproxy/widgets/auth_scaffold.dart';
+import 'package:natproxy/widgets/password_field.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -21,20 +25,71 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
+  String _cleanEmail() => _email.text.trim().toLowerCase();
+
+  Future<void> _resendVerificationEmail(String email) async {
+    await SupabaseConfig.client.auth.resend(
+      type: OtpType.signup,
+      email: email,
+    );
+  }
+
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
     try {
       await SupabaseConfig.client.auth.signInWithPassword(
-        email: _email.text.trim(),
+        email: _cleanEmail(),
         password: _password.text,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+
+      // Common Supabase case: user exists but hasn't verified email yet.
+      if (AuthHelpers.isEmailNotConfirmed(e)) {
+        final email = _cleanEmail();
+        final shouldResend = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Verify your email'),
+            content: const Text(
+              'Your email is not verified yet. Please verify to sign in.\n\n'
+              'Do you want us to resend the verification email?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Not now'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Resend email'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldResend == true) {
+          await _resendVerificationEmail(email);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Verification email resent. Check your inbox/spam.')),
+          );
+        }
+
+        return;
+      }
+
+      // Better message for duplicate signup edge cases.
+      if (AuthHelpers.isAlreadyRegistered(e)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This email is already registered. Please sign in.')),
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -42,102 +97,57 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.08),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.black12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 8),
-                        Text(
-                          'Welcome back',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Sign in to continue to NATProxy',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(color: Colors.black54),
-                        ),
-                        const SizedBox(height: 24),
-                        TextFormField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) return 'Enter your email';
-                            if (!v.contains('@')) return 'Invalid email';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _password,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Enter your password';
-                            if (v.length < 6) return 'Minimum 6 characters';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 18),
-                        FilledButton(
-                          onPressed: _loading ? null : _signIn,
-                          child: _loading
-                              ? const SizedBox(
-                                  height: 18,
-                                  width: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Sign in'),
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: _loading
-                              ? null
-                              : () => Navigator.of(context).pushNamed('/sign-up'),
-                          child: const Text("Don't have an account? Sign up"),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+    return AuthScaffold(
+      title: 'Welcome back',
+      subtitle: 'Sign in to continue to CDN-NETSHARE.',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                prefixIcon: Icon(Icons.alternate_email),
               ),
+              validator: (v) {
+                final value = (v ?? '').trim();
+                if (value.isEmpty) return 'Enter your email';
+                if (!value.contains('@') || !value.contains('.')) return 'Invalid email';
+                return null;
+              },
             ),
-          ),
+            const SizedBox(height: 14),
+            PasswordField(
+              controller: _password,
+              validator: (v) {
+                final value = v ?? '';
+                if (value.isEmpty) return 'Enter your password';
+                if (value.length < 6) return 'Minimum 6 characters';
+                return null;
+              },
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: _loading ? null : _signIn,
+              icon: _loading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.login_outlined),
+              label: Text(_loading ? 'Signing in…' : 'Sign in'),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: _loading ? null : () => Navigator.of(context).pushNamed('/sign-up'),
+              child: const Text("Don't have an account? Sign up"),
+            ),
+          ],
         ),
       ),
     );

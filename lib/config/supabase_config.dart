@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Supabase configuration for NATProxy
+/// Supabase configuration for CDN-NETSHARE
 /// NOTE: These are *publishable / anon* keys safe for client apps.
 abstract final class SupabaseConfig {
   static const String url = 'https://bztwadpqoohabbemqutp.supabase.co';
