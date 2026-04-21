@@ -1,0 +1,129 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                   NATProxy - Quick Build Guide                             ║
+║                                                                            ║
+║  This package contains everything you need to compile NATProxy to APK     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+WHAT'S INCLUDED:
+✓ Complete Flutter source code
+✓ Go backend library source
+✓ Android configuration
+✓ Build scripts
+✓ Detailed documentation
+
+═══════════════════════════════════════════════════════════════════════════════
+
+MINIMUM REQUIREMENTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Java Development Kit (JDK) 17
+   Download: https://www.oracle.com/java/technologies/downloads/#java17
+
+2. Go 1.25+
+   Download: https://golang.org/dl/
+
+3. Flutter SDK (Latest)
+   Download: https://flutter.dev/docs/get-started/install
+   
+4. Android SDK (API 24+)
+   Download: https://developer.android.com/studio
+
+5. Go Mobile
+   Install: go install golang.org/x/mobile/cmd/gomobile@latest
+
+═══════════════════════════════════════════════════════════════════════════════
+
+QUICK BUILD (5 STEPS):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1: Set Environment Variables
+   Windows (CMD):
+   set ANDROID_HOME=C:\Users\YourUsername\AppData\Local\Android\Sdk
+   set JAVA_HOME=C:\Program Files\Java\jdk-17
+
+   macOS/Linux:
+   export ANDROID_HOME=~/Android/Sdk
+   export JAVA_HOME=/usr/libexec/java_home -v 17
+
+Step 2: Navigate to Project
+   cd natproxy-build-package
+
+Step 3: Build Go Library
+   ./build-android.sh arm
+
+Step 4: Install Dependencies
+   flutter pub get
+
+Step 5: Build APK
+   flutter build apk --release
+
+═══════════════════════════════════════════════════════════════════════════════
+
+OUTPUT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your APK will be at:
+   build/app/outputs/flutter-apk/app-release.apk
+
+═══════════════════════════════════════════════════════════════════════════════
+
+INSTALLATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Using ADB (Android Debug Bridge):
+   adb install build/app/outputs/flutter-apk/app-release.apk
+
+Manual Installation:
+   1. Copy APK to phone via USB or cloud storage
+   2. Open file manager on phone
+   3. Tap APK file
+   4. Tap "Install"
+   5. Done!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DOCUMENTATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For detailed instructions, see:
+   BUILD_INSTRUCTIONS.md (comprehensive guide)
+   README.md (original documentation)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Check your environment:
+   flutter doctor
+
+Clean and rebuild:
+   flutter clean
+   rm -rf build/
+   flutter pub get
+   flutter build apk --release
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ESTIMATED BUILD TIME:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+First build:   30-60 minutes
+Subsequent:    5-10 minutes
+Clean build:   20-40 minutes
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SUPPORT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GitHub: https://github.com/mahsanet/natproxy
+Issues: https://github.com/mahsanet/natproxy/issues
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Ready to build? Start with Step 1 above!
+
+Questions? Check BUILD_INSTRUCTIONS.md for detailed help.
+
+═══════════════════════════════════════════════════════════════════════════════
