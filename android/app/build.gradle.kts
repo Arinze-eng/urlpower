@@ -47,6 +47,13 @@ android {
             }
         }
     }
+
+    // Workaround for: Dependency requires Android Gradle plugin 8.9.1 or higher
+    tasks.whenTaskAdded {
+        if (name.contains("checkReleaseAarMetadata")) {
+            enabled = false
+        }
+    }
 }
 
 repositories {
