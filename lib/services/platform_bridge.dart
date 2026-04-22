@@ -1,9 +1,58 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class PlatformBridge {
   static const _channel = MethodChannel('com.p2pshare/vpn');
   static const _statusChannel = EventChannel('com.p2pshare/status');
+
+  /// Resolves localhost URLs to device IP address for Termux compatibility.
+  static Future<String> resolveSignalingUrl(String url) async {
+    if (url.isEmpty) return url;
+    
+    try {
+      final uri = Uri.parse(url);
+      
+      // Only translate localhost/127.0.0.1
+      if (uri.host != 'localhost' && uri.host != '127.0.0.1') {
+        return url;
+      }
+      
+      // Get device's local IP address
+      final deviceIp = await _channel.invokeMethod<String>('getLocalIpAddress');
+      if (deviceIp != null && deviceIp.isNotEmpty && deviceIp != '127.0.0.1') {
+        final newUri = uri.replace(host: deviceIp);
+        final resolved = newUri.toString();
+        debugPrint('PlatformBridge: Resolved localhost URL: $url → $resolved');
+        return resolved;
+      }
+    } catch (e) {
+      debugPrint('PlatformBridge: Failed to resolve localhost URL: $e');
+    }
+    
+    return url;
+  }
+
+  /// Resolves all signaling URLs in settings JSON
+  static Future<Map<String, dynamic>> resolveSettingsUrls(
+    Map<String, dynamic> settings,
+  ) async {
+    final resolved = Map<String, dynamic>.from(settings);
+    
+    if (resolved['signalingUrl'] is String) {
+      resolved['signalingUrl'] = await resolveSignalingUrl(
+        resolved['signalingUrl'] as String,
+      );
+    }
+    
+    if (resolved['discoveryUrl'] is String) {
+      resolved['discoveryUrl'] = await resolveSignalingUrl(
+        resolved['discoveryUrl'] as String,
+      );
+    }
+    
+    return resolved;
+  }
 
   static Future<bool> requestVpnPermission() async {
     return await _channel.invokeMethod<bool>('requestVpnPermission') ?? false;
@@ -12,6 +61,11 @@ class PlatformBridge {
   static Future<bool> requestBatteryOptimization() async {
     return await _channel.invokeMethod<bool>('requestBatteryOptimization') ??
         false;
+  }
+
+  static Future<String> getLocalIpAddress() async {
+    final result = await _channel.invokeMethod<String>('getLocalIpAddress');
+    return result ?? '127.0.0.1';
   }
 
   static Future<String> startServer(String settingsJson) async {
@@ -30,10 +84,19 @@ class PlatformBridge {
     String connectionCode,
     String settingsJson,
   ) async {
-    await _channel.invokeMethod('startClient', {
-      'code': connectionCode,
-      'settings': settingsJson,
-    });
+    try {
+      final settings = jsonDecode(settingsJson) as Map<String, dynamic>;
+      final resolved = await resolveSettingsUrls(settings);
+      final resolvedJson = jsonEncode(resolved);
+      
+      await _channel.invokeMethod('startClient', {
+        'code': connectionCode,
+        'settings': resolvedJson,
+      });
+    } catch (e) {
+      debugPrint('PlatformBridge: startClient error: $e');
+      rethrow;
+    }
   }
 
   // Phase 1: connect WebRTC before the TUN is up. Throws on failure.
@@ -41,17 +104,35 @@ class PlatformBridge {
     String connectionCode,
     String settingsJson,
   ) async {
-    await _channel.invokeMethod('connectWebRTC', {
-      'code': connectionCode,
-      'settings': settingsJson,
-    });
+    try {
+      final settings = jsonDecode(settingsJson) as Map<String, dynamic>;
+      final resolved = await resolveSettingsUrls(settings);
+      final resolvedJson = jsonEncode(resolved);
+      
+      await _channel.invokeMethod('connectWebRTC', {
+        'code': connectionCode,
+        'settings': resolvedJson,
+      });
+    } catch (e) {
+      debugPrint('PlatformBridge: connectWebRTC error: $e');
+      rethrow;
+    }
   }
 
   // Phase 2: WebRTC is up, now bring the TUN online. Call after connectWebRTC.
   static Future<void> startVpn(String settingsJson) async {
-    await _channel.invokeMethod('startVpn', {
-      'settings': settingsJson,
-    });
+    try {
+      final settings = jsonDecode(settingsJson) as Map<String, dynamic>;
+      final resolved = await resolveSettingsUrls(settings);
+      final resolvedJson = jsonEncode(resolved);
+      
+      await _channel.invokeMethod('startVpn', {
+        'settings': resolvedJson,
+      });
+    } catch (e) {
+      debugPrint('PlatformBridge: startVpn error: $e');
+      rethrow;
+    }
   }
 
   static Future<void> stop() async {

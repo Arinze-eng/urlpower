@@ -187,6 +187,9 @@ type connectionInfo struct {
 type serverConfig struct {
 	ListenPort   int    `json:"listenPort"`
 	StunServer   string `json:"stunServer"`
+	TurnServer   string `json:"turnServer"`    // TURN server URL
+	TurnUsername string `json:"turnUsername"`  // TURN username
+	TurnPassword string `json:"turnPassword"`  // TURN password
 	SignalingURL string `json:"signalingUrl"`
 	DiscoveryURL string `json:"discoveryUrl"`
 	NatMethod    string `json:"natMethod"`
@@ -526,6 +529,12 @@ func StartServer(settingsJSON string) (string, error) {
 	npc := cfg.NumPeerConnections
 	if npc <= 0 {
 		npc = 1
+	}
+
+	// Add TURN servers to ICE servers if configured
+	if cfg.TurnServer != "" {
+		iceServers = append(iceServers, cfg.TurnServer)
+		applog.Infof("Added TURN server: %s", cfg.TurnServer)
 	}
 
 	wrtcGroup, sdpOffers, err := startServerGroupWithSrflx(npc, iceServers, obfsKey, relayAddr, sessionID, srvOpts)

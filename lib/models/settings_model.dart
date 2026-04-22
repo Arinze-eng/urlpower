@@ -3,6 +3,9 @@ import 'package:natproxy/config/env_config.dart';
 class ServerSettings {
   static const defaultListenPort = EnvConfig.SERVER_LISTEN_PORT;
   static const defaultStunServer = EnvConfig.STUN_SERVER;
+  static const defaultTurnServer = '';
+  static const defaultTurnUsername = '';
+  static const defaultTurnPassword = '';
   static const defaultSignalingUrl = EnvConfig.SIGNALING_URL;
   static const defaultDiscoveryUrl = EnvConfig.DISCOVERY_URL;
   static const defaultNatMethod = EnvConfig.SERVER_NAT_METHOD;
@@ -74,6 +77,9 @@ class ServerSettings {
 
   final int listenPort;
   final String stunServer;
+  final String turnServer;
+  final String turnUsername;
+  final String turnPassword;
   final String signalingUrl;
   final String discoveryUrl;
   final String natMethod; // auto, upnp, holepunch
@@ -161,6 +167,9 @@ class ServerSettings {
   const ServerSettings({
     this.listenPort = defaultListenPort,
     this.stunServer = defaultStunServer,
+    this.turnServer = defaultTurnServer,
+    this.turnUsername = defaultTurnUsername,
+    this.turnPassword = defaultTurnPassword,
     this.signalingUrl = defaultSignalingUrl,
     this.discoveryUrl = defaultDiscoveryUrl,
     this.natMethod = defaultNatMethod,
@@ -223,6 +232,9 @@ class ServerSettings {
   ServerSettings copyWith({
     int? listenPort,
     String? stunServer,
+    String? turnServer,
+    String? turnUsername,
+    String? turnPassword,
     String? signalingUrl,
     String? discoveryUrl,
     String? natMethod,
@@ -284,6 +296,9 @@ class ServerSettings {
     return ServerSettings(
       listenPort: listenPort ?? this.listenPort,
       stunServer: stunServer ?? this.stunServer,
+      turnServer: turnServer ?? this.turnServer,
+      turnUsername: turnUsername ?? this.turnUsername,
+      turnPassword: turnPassword ?? this.turnPassword,
       signalingUrl: signalingUrl ?? this.signalingUrl,
       discoveryUrl: discoveryUrl ?? this.discoveryUrl,
       natMethod: natMethod ?? this.natMethod,
@@ -347,6 +362,9 @@ class ServerSettings {
   Map<String, dynamic> toJson() => {
     'listenPort': listenPort,
     'stunServer': stunServer,
+    'turnServer': turnServer,
+    'turnUsername': turnUsername,
+    'turnPassword': turnPassword,
     'signalingUrl': signalingUrl,
     'discoveryUrl': discoveryUrl,
     'natMethod': natMethod,
@@ -407,6 +425,9 @@ class ServerSettings {
     return ServerSettings(
       listenPort: json['listenPort'] as int? ?? defaultListenPort,
       stunServer: json['stunServer'] as String? ?? defaultStunServer,
+      turnServer: json['turnServer'] as String? ?? defaultTurnServer,
+      turnUsername: json['turnUsername'] as String? ?? defaultTurnUsername,
+      turnPassword: json['turnPassword'] as String? ?? defaultTurnPassword,
       signalingUrl: json['signalingUrl'] as String? ?? defaultSignalingUrl,
       discoveryUrl: json['discoveryUrl'] as String? ?? defaultDiscoveryUrl,
       natMethod: json['natMethod'] as String? ?? defaultNatMethod,

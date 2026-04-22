@@ -244,13 +244,14 @@ func StartServer(iceServers []string, obfsKey []byte, relayAddr string, sessionI
 		switch state {
 		case pionwebrtc.ICEConnectionStateConnected, pionwebrtc.ICEConnectionStateCompleted:
 			s.iceAlive.Store(true)
+			applog.Success("webrtc server: ICE connection established")
 		case pionwebrtc.ICEConnectionStateDisconnected:
 			s.iceAlive.Store(false)
 			applog.Warn("webrtc server: ICE disconnected (may recover)")
 		case pionwebrtc.ICEConnectionStateFailed, pionwebrtc.ICEConnectionStateClosed:
 			s.iceAlive.Store(false)
 			s.failedOnce.Do(func() { close(s.failed) })
-			applog.Warn("webrtc server: ICE connection lost, closing smux sessions")
+			applog.Errorf("webrtc server: ICE connection failed. Possible causes: Symmetric NAT (needs TURN), Firewall blocking UDP, or unreachable STUN/TURN servers.")
 			s.closeSessions()
 		}
 	})
