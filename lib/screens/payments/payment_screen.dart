@@ -221,8 +221,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ],
         ),
       ),
-        ),
-      ),
     );
   }
 
@@ -237,82 +235,84 @@ class _PaymentScreenState extends State<PaymentScreen> {
           backgroundColor: Colors.transparent,
           appBar: AppBar(title: const Text('Plans')),
           body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            if (_verifying)
-              const LinearProgressIndicator(minHeight: 3)
-            else
-              const SizedBox(height: 3),
-            const SizedBox(height: 12),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Subscription status',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (_verifying)
+                  const LinearProgressIndicator(minHeight: 3)
+                else
+                  const SizedBox(height: 3),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Subscription status',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 6),
+                        Text('Plan: ${plan ?? '-'}'),
+                        Text('Expires: ${expires?.toIso8601String() ?? '-'}'),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: _refreshProfile,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Refresh status'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    Text('Plan: ${plan ?? '-'}'),
-                    Text('Expires: ${expires?.toIso8601String() ?? '-'}'),
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      onPressed: _refreshProfile,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Refresh status'),
-                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _planCard(
+                  title: 'Basic (15Mbps plan)',
+                  price: '₦20,000 / month',
+                  plan: 'basic',
+                  bullets: const [
+                    'Unlock basic usage after trial',
+                    'Reliable P2P experience',
+                    'Monthly renewal',
+                  ],
+                  gradient: [
+                    Colors.white,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.10),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _planCard(
-              title: 'Basic (15Mbps plan)',
-              price: '₦20,000 / month',
-              plan: 'basic',
-              bullets: const [
-                'Unlock basic usage after trial',
-                'Reliable P2P experience',
-                'Monthly renewal',
-              ],
-              gradient: [
-                Colors.white,
-                Theme.of(context).colorScheme.primary.withOpacity(0.10),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _planCard(
-              title: 'Premium (30Mbps plan)',
-              price: '₦40,000 / month',
-              plan: 'premium',
-              bullets: const [
-                'Unlock premium usage',
-                'Priority features (as enabled in-app)',
-                'Monthly renewal',
-              ],
-              gradient: [
-                Theme.of(context).colorScheme.tertiary.withOpacity(0.18),
-                Colors.white,
+                const SizedBox(height: 12),
+                _planCard(
+                  title: 'Premium (30Mbps plan)',
+                  price: '₦40,000 / month',
+                  plan: 'premium',
+                  bullets: const [
+                    'Unlock premium usage',
+                    'Priority features (as enabled in-app)',
+                    'Monthly renewal',
+                  ],
+                  gradient: [
+                    Theme.of(context).colorScheme.tertiary.withOpacity(0.18),
+                    Colors.white,
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'After payment, you’ll be redirected back to the app automatically.\n'
+                  'If redirect doesn’t happen, return to the app and tap “Refresh status”.',
+                  style: TextStyle(
+                    color: Colors.greenAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'After payment, you’ll be redirected back to the app automatically.\n'
-              'If redirect doesn’t happen, return to the app and tap “Refresh status”.',
-              style: TextStyle(
-                color: Colors.greenAccent,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
