@@ -84,7 +84,7 @@ class _ClientScreenState extends State<ClientScreen>
       // Auto start connection for a 1-tap flow.
       Future.microtask(() {
         if (mounted && !_isConnected && !_isConnecting) {
-          _connect(_codeController.text);
+          _connect();
         }
       });
     }
@@ -130,7 +130,7 @@ class _ClientScreenState extends State<ClientScreen>
         });
 
         if (!_isConnected && !_isConnecting) {
-          _connect(payload);
+          _connect();
         }
         return;
       }

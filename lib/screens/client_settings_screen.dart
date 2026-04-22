@@ -111,8 +111,6 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
         ],
       ),
         ),
-      ),
-    );
     if (confirmed == true) {
       _applySettings(const ClientSettings());
     }
