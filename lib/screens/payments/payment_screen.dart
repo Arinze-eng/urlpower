@@ -220,10 +220,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
   }
-
   @override
   Widget build(BuildContext context) {
     final plan = _profile?.plan;

@@ -63,7 +63,7 @@ abstract final class HostAuth {
   static String tryExtractUuidFromConnectionCode(String code) {
     try {
       final bin = base64Decode(code.trim());
-      final inflated = const ZLibCodec().decoder.convert(bin);
+      final inflated = ZLibCodec().decoder.convert(bin);
       final jsonStr = utf8.decode(inflated);
       final obj = jsonDecode(jsonStr);
       if (obj is Map<String, dynamic>) {
