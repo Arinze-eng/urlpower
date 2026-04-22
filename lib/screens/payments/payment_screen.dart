@@ -235,29 +235,29 @@ class _PaymentScreenState extends State<PaymentScreen> {
           appBar: AppBar(title: const Text('Plans')),
           body: SafeArea(
             child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            if (_verifying)
-              const LinearProgressIndicator(minHeight: 3)
-            else
-              const SizedBox(height: 3),
-            const SizedBox(height: 12),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Subscription status',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (_verifying)
+                  const LinearProgressIndicator(minHeight: 3)
+                else
+                  const SizedBox(height: 3),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Subscription status',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 6),
                     Text('Plan: ${plan ?? '-'}'),
                     Text('Expires: ${expires?.toIso8601String() ?? '-'}'),
                     const SizedBox(height: 10),
@@ -312,6 +312,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ],
         ),
       ),
+    ),
+    ),
     );
   }
 }
