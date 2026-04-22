@@ -365,13 +365,8 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
           ),
         ],
       ),
-        ),
-    if (confirmed == true) {
-      _applySettings(const ServerSettings());
-    }
-  }
-
-  void _onProtocolChanged(String? value) {
+                    ),
+              ),
     if (value == null) return;
     setState(() {
       _protocol = value;
@@ -1529,6 +1524,17 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                 ),
               ),
             ),
+          );
+              ),
+            ),
+          );
+          );
+              ),
+            ),
+          ),
+              ),
+            ),
+              ),
     );
   }
 }

@@ -110,13 +110,8 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
           ),
         ],
       ),
-        ),
-    if (confirmed == true) {
-      _applySettings(const ClientSettings());
-    }
-  }
-
-  Future<void> _loadSettings() async {
+                    ),
+              ),
     try {
       final settings = await _settingsService.loadClientSettings();
       if (!mounted) return;
@@ -575,6 +570,17 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
                 ),
               ),
             ),
+          );
+              ),
+            ),
+          );
+          );
+              ),
+            ),
+          ),
+              ),
+            ),
+              ),
     );
   }
 }
