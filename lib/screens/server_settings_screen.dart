@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:natproxy/models/server_listing.dart';
+import 'package:natproxy/models/settings_model.dart';
 import 'package:natproxy/services/settings_service.dart';
 import 'package:natproxy/services/name_generator.dart';
 import 'package:natproxy/widgets/app_background.dart';
@@ -251,7 +251,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
   }
 
   String _generateUuid() {
-    return NameGenerator.generateUuid();
+    return const Uuid().v4();
   }
 
   String? _validatePort(String? value) {

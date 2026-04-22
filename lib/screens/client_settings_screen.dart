@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/settings_model.dart';
-import '../services/settings_service.dart';
-import '../widgets/app_background.dart';
+import 'package:natproxy/models/settings_model.dart';
+import 'package:natproxy/services/settings_service.dart';
+import 'package:natproxy/widgets/app_background.dart';
 
 class ClientSettingsScreen extends StatefulWidget {
   const ClientSettingsScreen({super.key});
@@ -23,6 +23,7 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
   late TextEditingController _signalingController;
   late TextEditingController _discoveryUrlController;
   late TextEditingController _roomFilterController;
+
   late TextEditingController _sctpRecvBufferController;
   late TextEditingController _sctpRTOMaxController;
   late TextEditingController _udpReadBufferController;
@@ -31,13 +32,14 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
   late TextEditingController _iceFailedTimeoutController;
   late TextEditingController _iceKeepaliveController;
   late TextEditingController _dtlsRetransmitController;
-  bool _dtlsSkipVerify = ClientSettings.defaultDtlsSkipVerify;
-  bool _sctpZeroChecksum = ClientSettings.defaultSctpZeroChecksum;
-  bool _disableCloseByDTLS = ClientSettings.defaultDisableCloseByDTLS;
-  bool _allowDirectDNS = ClientSettings.defaultAllowDirectDNS;
-  bool _maskIPs = ClientSettings.defaultMaskIPs;
-  bool _discoveryEnabled = true;
+
   bool _isLoading = true;
+  bool _allowDirectDNS = false;
+  bool _maskIPs = false;
+  bool _discoveryEnabled = false;
+  bool _dtlsSkipVerify = false;
+  bool _sctpZeroChecksum = false;
+  bool _disableCloseByDTLS = false;
 
   @override
   void initState() {
@@ -50,7 +52,6 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
     _stunController = TextEditingController();
     _signalingController = TextEditingController();
     _discoveryUrlController = TextEditingController();
-
     _roomFilterController = TextEditingController();
     _sctpRecvBufferController = TextEditingController();
     _sctpRTOMaxController = TextEditingController();
@@ -63,33 +64,87 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
     _loadSettings();
   }
 
-  void _applySettings(ClientSettings settings) {
-    setState(() {
-      _socksPortController.text = settings.socksPort.toString();
-      _tunAddressController.text = settings.tunAddress;
-      _mtuController.text = settings.mtu.toString();
-      _dns1Controller.text = settings.dns1;
-      _dns2Controller.text = settings.dns2;
-      _stunController.text = settings.stunServer;
-      _signalingController.text = settings.signalingUrl;
-      _discoveryUrlController.text = settings.discoveryUrl;
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await _settingsService.loadClientSettings();
+      if (!mounted) return;
+      _applySettings(settings);
+      setState(() => _isLoading = false);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load settings: $e')),
+      );
+    }
+  }
 
-      _discoveryEnabled = settings.discoveryEnabled;
-      _roomFilterController.text = settings.roomFilter;
-      _sctpRecvBufferController.text = settings.sctpRecvBuffer.toString();
-      _sctpRTOMaxController.text = settings.sctpRTOMax.toString();
-      _udpReadBufferController.text = settings.udpReadBuffer.toString();
-      _udpWriteBufferController.text = settings.udpWriteBuffer.toString();
-      _iceDisconnTimeoutController.text = settings.iceDisconnTimeout.toString();
-      _iceFailedTimeoutController.text = settings.iceFailedTimeout.toString();
-      _iceKeepaliveController.text = settings.iceKeepalive.toString();
-      _dtlsRetransmitController.text = settings.dtlsRetransmit.toString();
-      _dtlsSkipVerify = settings.dtlsSkipVerify;
-      _sctpZeroChecksum = settings.sctpZeroChecksum;
-      _disableCloseByDTLS = settings.disableCloseByDTLS;
-      _allowDirectDNS = settings.allowDirectDNS;
-      _maskIPs = settings.maskIPs;
-    });
+  void _applySettings(ClientSettings s) {
+    _socksPortController.text = s.socksPort.toString();
+    _tunAddressController.text = s.tunAddress;
+    _mtuController.text = s.mtu.toString();
+    _dns1Controller.text = s.dns1;
+    _dns2Controller.text = s.dns2;
+    _allowDirectDNS = s.allowDirectDNS;
+    _stunController.text = s.stunServer;
+    _signalingController.text = s.signalingUrl;
+    _maskIPs = s.maskIPs;
+    _discoveryUrlController.text = s.discoveryUrl;
+    _discoveryEnabled = s.discoveryEnabled;
+    _roomFilterController.text = s.roomFilter;
+    _sctpRecvBufferController.text = s.sctpRecvBuffer.toString();
+    _sctpRTOMaxController.text = s.sctpRTOMax.toString();
+    _udpReadBufferController.text = s.udpReadBuffer.toString();
+    _udpWriteBufferController.text = s.udpWriteBuffer.toString();
+    _iceDisconnTimeoutController.text = s.iceDisconnTimeout.toString();
+    _iceFailedTimeoutController.text = s.iceFailedTimeout.toString();
+    _iceKeepaliveController.text = s.iceKeepalive.toString();
+    _dtlsRetransmitController.text = s.dtlsRetransmit.toString();
+    _dtlsSkipVerify = s.dtlsSkipVerify;
+    _sctpZeroChecksum = s.sctpZeroChecksum;
+    _disableCloseByDTLS = s.disableCloseByDTLS;
+  }
+
+  Future<void> _saveSettings() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final s = ClientSettings(
+      socksPort: int.parse(_socksPortController.text),
+      tunAddress: _tunAddressController.text,
+      mtu: int.parse(_mtuController.text),
+      dns1: _dns1Controller.text,
+      dns2: _dns2Controller.text,
+      allowDirectDNS: _allowDirectDNS,
+      stunServer: _stunController.text,
+      signalingUrl: _signalingController.text,
+      maskIPs: _maskIPs,
+      discoveryUrl: _discoveryUrlController.text,
+      discoveryEnabled: _discoveryEnabled,
+      roomFilter: _roomFilterController.text,
+      sctpRecvBuffer: int.parse(_sctpRecvBufferController.text),
+      sctpRTOMax: int.parse(_sctpRTOMaxController.text),
+      udpReadBuffer: int.parse(_udpReadBufferController.text),
+      udpWriteBuffer: int.parse(_udpWriteBufferController.text),
+      iceDisconnTimeout: int.parse(_iceDisconnTimeoutController.text),
+      iceFailedTimeout: int.parse(_iceFailedTimeoutController.text),
+      iceKeepalive: int.parse(_iceKeepaliveController.text),
+      dtlsRetransmit: int.parse(_dtlsRetransmitController.text),
+      dtlsSkipVerify: _dtlsSkipVerify,
+      sctpZeroChecksum: _sctpZeroChecksum,
+      disableCloseByDTLS: _disableCloseByDTLS,
+    );
+
+    try {
+      await _settingsService.saveClientSettings(s);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Client settings saved.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
+    }
   }
 
   Future<void> _resetToDefaults() async {
@@ -97,7 +152,7 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset to Defaults'),
-        content: const Text('All client settings will be reverted to their default values. This does not save automatically.'),
+        content: const Text('All client settings will be reverted to their default values.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -115,108 +170,37 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
     }
   }
 
-  Future<void> _loadSettings() async {
-    try {
-      final settings = await _settingsService.loadClientSettings();
-      if (!mounted) return;
-      _applySettings(settings);
-      setState(() => _isLoading = false);
-    } catch (e) {
-      debugPrint('ClientSettingsScreen: loadSettings error: $e');
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _saveSettings() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final settings = ClientSettings(
-      socksPort: int.parse(_socksPortController.text.trim()),
-      tunAddress: _tunAddressController.text.trim(),
-      mtu: int.parse(_mtuController.text.trim()),
-      dns1: _dns1Controller.text.trim(),
-      dns2: _dns2Controller.text.trim(),
-      stunServer: _stunController.text.trim(),
-      signalingUrl: _signalingController.text.trim(),
-      discoveryUrl: _discoveryUrlController.text.trim(),
-      discoveryEnabled: _discoveryEnabled,
-      roomFilter: _roomFilterController.text.trim(),
-      sctpRecvBuffer:
-          int.tryParse(_sctpRecvBufferController.text.trim()) ??
-          ClientSettings.defaultSctpRecvBuffer,
-      sctpRTOMax:
-          int.tryParse(_sctpRTOMaxController.text.trim()) ??
-          ClientSettings.defaultSctpRTOMax,
-      udpReadBuffer:
-          int.tryParse(_udpReadBufferController.text.trim()) ??
-          ClientSettings.defaultUdpReadBuffer,
-      udpWriteBuffer:
-          int.tryParse(_udpWriteBufferController.text.trim()) ??
-          ClientSettings.defaultUdpWriteBuffer,
-      iceDisconnTimeout:
-          int.tryParse(_iceDisconnTimeoutController.text.trim()) ??
-          ClientSettings.defaultIceDisconnTimeout,
-      iceFailedTimeout:
-          int.tryParse(_iceFailedTimeoutController.text.trim()) ??
-          ClientSettings.defaultIceFailedTimeout,
-      iceKeepalive:
-          int.tryParse(_iceKeepaliveController.text.trim()) ??
-          ClientSettings.defaultIceKeepalive,
-      dtlsRetransmit:
-          int.tryParse(_dtlsRetransmitController.text.trim()) ??
-          ClientSettings.defaultDtlsRetransmit,
-      dtlsSkipVerify: _dtlsSkipVerify,
-      sctpZeroChecksum: _sctpZeroChecksum,
-      disableCloseByDTLS: _disableCloseByDTLS,
-      allowDirectDNS: _allowDirectDNS,
-      maskIPs: _maskIPs,
-    );
-
-    await _settingsService.saveClientSettings(settings);
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Client settings saved')));
-      Navigator.of(context).pop();
-    }
-  }
-
   String? _validatePort(String? value) {
     if (value == null || value.trim().isEmpty) return 'Required';
     final port = int.tryParse(value.trim());
-    if (port == null || port < 1024 || port > 65535) {
-      return 'Port must be 1024-65535';
-    }
+    if (port == null || port < 1 || port > 65535) return '1-65535';
     return null;
   }
 
   String? _validateIpv4(String? value) {
     if (value == null || value.trim().isEmpty) return 'Required';
-    final parts = value.trim().split('.');
-    if (parts.length != 4) return 'Invalid IPv4 address';
-    for (final part in parts) {
-      final n = int.tryParse(part);
-      if (n == null || n < 0 || n > 255) return 'Invalid IPv4 address';
-    }
+    final regExp = RegExp(r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$');
+    if (!regExp.hasMatch(value.trim())) return 'Invalid IPv4';
     return null;
   }
 
   String? _validateMtu(String? value) {
     if (value == null || value.trim().isEmpty) return 'Required';
     final mtu = int.tryParse(value.trim());
-    if (mtu == null || mtu < 1280 || mtu > 9000) {
-      return 'MTU must be 1280-9000';
-    }
+    if (mtu == null || mtu < 576 || mtu > 1500) return '576-1500';
     return null;
   }
 
   String? _validateHostPort(String? value) {
     if (value == null || value.trim().isEmpty) return 'Required';
-    final parts = value.trim().split(':');
-    if (parts.length != 2 ||
-        parts[0].isEmpty ||
-        int.tryParse(parts[1]) == null) {
-      return 'Format: host:port';
+    if (!value.contains(':')) return 'Host:Port required';
+    return null;
+  }
+
+  String? _validateUrl(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+      return 'http:// or https:// required';
     }
     return null;
   }
@@ -224,16 +208,7 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
   String? _validatePositiveInt(String? value) {
     if (value == null || value.trim().isEmpty) return 'Required';
     final v = int.tryParse(value.trim());
-    if (v == null || v <= 0) return 'Must be > 0';
-    return null;
-  }
-
-  String? _validateUrl(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Required';
-    final uri = Uri.tryParse(value.trim());
-    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
-      return 'Enter a valid URL';
-    }
+    if (v == null || v < 0) return 'Must be >= 0';
     return null;
   }
 
@@ -247,7 +222,6 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
     _stunController.dispose();
     _signalingController.dispose();
     _discoveryUrlController.dispose();
-
     _roomFilterController.dispose();
     _sctpRecvBufferController.dispose();
     _sctpRTOMaxController.dispose();
@@ -269,310 +243,154 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
           appBar: AppBar(
             title: const Text('Client Settings'),
             actions: [
-          IconButton(
-            icon: const Icon(Icons.restore),
-            tooltip: 'Reset to Defaults',
-            onPressed: _isLoading ? null : _resetToDefaults,
+              IconButton(
+                icon: const Icon(Icons.restore),
+                tooltip: 'Reset to Defaults',
+                onPressed: _isLoading ? null : _resetToDefaults,
+              ),
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: _isLoading ? null : _saveSettings,
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _isLoading ? null : _saveSettings,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Proxy',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _socksPortController,
-                      decoration: const InputDecoration(
-                        labelText: 'SOCKS Proxy Port',
-                        hintText: '10808',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: _validatePort,
-                    ),
-                    const SizedBox(height: 24),
-                    Text('VPN', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _tunAddressController,
-                      decoration: const InputDecoration(
-                        labelText: 'TUN Address',
-                        hintText: '10.0.0.2',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: _validateIpv4,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _mtuController,
-                      decoration: const InputDecoration(
-                        labelText: 'MTU',
-                        hintText: '1500',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: _validateMtu,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _dns1Controller,
-                      decoration: const InputDecoration(
-                        labelText: 'DNS Server 1',
-                        hintText: '8.8.8.8',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: _validateIpv4,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _dns2Controller,
-                      decoration: const InputDecoration(
-                        labelText: 'DNS Server 2',
-                        hintText: '1.1.1.1',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: _validateIpv4,
-                    ),
-                    SwitchListTile(
-                      title: const Text('Allow Direct DNS Fallback'),
-                      subtitle: const Text(
-                        'Falls back to ISP DNS if tunnel DNS fails (privacy leak)',
-                      ),
-                      value: _allowDirectDNS,
-                      onChanged: (value) =>
-                          setState(() => _allowDirectDNS = value),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Network',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _stunController,
-                      decoration: const InputDecoration(
-                        labelText: 'STUN Server',
-                        hintText: 'stun.l.google.com:19302',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: _validateHostPort,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _signalingController,
-                      decoration: const InputDecoration(
-                        labelText: 'Signaling Server URL',
-                        hintText: 'http://[IP]:5601',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.url,
-                      validator: _validateUrl,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // === Advanced WebRTC Tuning ===
-                    ExpansionTile(
-                      title: const Text('Advanced WebRTC Tuning'),
-                      tilePadding: EdgeInsets.zero,
-                      childrenPadding: const EdgeInsets.only(bottom: 16),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'SCTP / DTLS / ICE',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
+                        Text('Proxy', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 12),
                         TextFormField(
-                          controller: _sctpRecvBufferController,
+                          controller: _socksPortController,
                           decoration: const InputDecoration(
-                            labelText: 'SCTP Recv Buffer (KB)',
-                            hintText: '8192',
+                            labelText: 'SOCKS Proxy Port',
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
+                          validator: _validatePort,
+                        ),
+                        const SizedBox(height: 24),
+                        Text('VPN', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _tunAddressController,
+                          decoration: const InputDecoration(
+                            labelText: 'TUN Address',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: _validateIpv4,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          controller: _sctpRTOMaxController,
+                          controller: _mtuController,
                           decoration: const InputDecoration(
-                            labelText: 'SCTP RTO Max (ms)',
-                            hintText: '2500',
+                            labelText: 'MTU',
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
+                          validator: _validateMtu,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          controller: _udpReadBufferController,
+                          controller: _dns1Controller,
                           decoration: const InputDecoration(
-                            labelText: 'UDP Read Buffer (KB)',
-                            hintText: '8192',
+                            labelText: 'DNS Server 1',
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
+                          validator: _validateIpv4,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          controller: _udpWriteBufferController,
+                          controller: _dns2Controller,
                           decoration: const InputDecoration(
-                            labelText: 'UDP Write Buffer (KB)',
-                            hintText: '8192',
+                            labelText: 'DNS Server 2',
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _iceDisconnTimeoutController,
-                          decoration: const InputDecoration(
-                            labelText: 'ICE Disconnected Timeout (ms)',
-                            hintText: '15000',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _iceFailedTimeoutController,
-                          decoration: const InputDecoration(
-                            labelText: 'ICE Failed Timeout (ms)',
-                            hintText: '25000',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _iceKeepaliveController,
-                          decoration: const InputDecoration(
-                            labelText: 'ICE Keepalive (ms)',
-                            hintText: '2000',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _dtlsRetransmitController,
-                          decoration: const InputDecoration(
-                            labelText: 'DTLS Retransmit (ms)',
-                            hintText: '100',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: _validatePositiveInt,
+                          validator: _validateIpv4,
                         ),
                         SwitchListTile(
-                          title: const Text('Skip DTLS HelloVerify'),
-                          value: _dtlsSkipVerify,
-                          onChanged: (value) =>
-                              setState(() => _dtlsSkipVerify = value),
+                          title: const Text('Allow Direct DNS Fallback'),
+                          value: _allowDirectDNS,
+                          onChanged: (value) => setState(() => _allowDirectDNS = value),
                           contentPadding: EdgeInsets.zero,
                         ),
+                        const SizedBox(height: 24),
+                        Text('Network', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _stunController,
+                          decoration: const InputDecoration(
+                            labelText: 'STUN Server',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: _validateHostPort,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _signalingController,
+                          decoration: const InputDecoration(
+                            labelText: 'Signaling Server URL',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.url,
+                          validator: _validateUrl,
+                        ),
+                        const SizedBox(height: 24),
+                        Text('Logging', style: Theme.of(context).textTheme.titleMedium),
                         SwitchListTile(
-                          title: const Text('SCTP Zero Checksum'),
-                          value: _sctpZeroChecksum,
-                          onChanged: (value) =>
-                              setState(() => _sctpZeroChecksum = value),
+                          title: const Text('Mask IP Addresses in Logs'),
+                          value: _maskIPs,
+                          onChanged: (value) => setState(() => _maskIPs = value),
                           contentPadding: EdgeInsets.zero,
                         ),
+                        const SizedBox(height: 24),
+                        Text('Server Discovery', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _discoveryUrlController,
+                          decoration: const InputDecoration(
+                            labelText: 'Discovery Server URL',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.url,
+                          validator: _validateUrl,
+                        ),
                         SwitchListTile(
-                          title: const Text('Disable Close by DTLS'),
-                          value: _disableCloseByDTLS,
-                          onChanged: (value) =>
-                              setState(() => _disableCloseByDTLS = value),
+                          title: const Text('Browse available servers'),
+                          value: _discoveryEnabled,
+                          onChanged: (value) => setState(() => _discoveryEnabled = value),
                           contentPadding: EdgeInsets.zero,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _roomFilterController,
+                          decoration: const InputDecoration(
+                            labelText: 'Room filter',
+                            border: OutlineInputBorder(),
+                          ),
+                          enabled: _discoveryEnabled,
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: FilledButton(
+                            onPressed: _saveSettings,
+                            child: const Text('Save'),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-
-                    // === Logging ===
-                    Text(
-                      'Logging',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    SwitchListTile(
-                      title: const Text('Mask IP Addresses in Logs'),
-                      subtitle: const Text('Replace last octet with *'),
-                      value: _maskIPs,
-                      onChanged: (value) =>
-                          setState(() => _maskIPs = value),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Server Discovery',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _discoveryUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Discovery Server URL',
-                        hintText: 'http://host:5602',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.url,
-                      validator: _validateUrl,
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      title: const Text('Browse available servers'),
-                      subtitle: const Text('Find servers automatically'),
-                      value: _discoveryEnabled,
-                      onChanged: (value) =>
-                          setState(() => _discoveryEnabled = value),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _roomFilterController,
-                      decoration: const InputDecoration(
-                        labelText: 'Room filter',
-                        hintText: 'Leave empty for all',
-                        border: OutlineInputBorder(),
-                      ),
-                      enabled: _discoveryEnabled,
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: FilledButton(
-                        onPressed: _saveSettings,
-                        child: const Text('Save'),
-                      ),
-                    ),
-                  ],
-            ),
-          ),
+                  ),
+                ),
         ),
       ),
     );
