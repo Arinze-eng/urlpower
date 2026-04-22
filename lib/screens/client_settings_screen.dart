@@ -270,20 +270,20 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
           appBar: AppBar(
             title: const Text('Client Settings'),
             actions: [
-          IconButton(
-            icon: const Icon(Icons.restore),
-            tooltip: 'Reset to Defaults',
-            onPressed: _isLoading ? null : _resetToDefaults,
+              IconButton(
+                icon: const Icon(Icons.restore),
+                tooltip: 'Reset to Defaults',
+                onPressed: _isLoading ? null : _resetToDefaults,
+              ),
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: _isLoading ? null : _saveSettings,
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _isLoading ? null : _saveSettings,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
