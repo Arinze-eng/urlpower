@@ -575,6 +575,8 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
                 ),
               ),
             ),
+        ),
+      ),
     );
   }
 }
