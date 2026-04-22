@@ -37,6 +37,10 @@ jobs:
       - name: Build Go Library
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
+          # Use a compatible NDK version (NDK 25.2 is reliable with gomobile)
+          # The default NDK 27 in ubuntu-latest has some API version issues with gomobile
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653"
+          export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653
           gomobile init
           cd golib
           gomobile bind -target android -o ../android/app/libs/golib.aar .
