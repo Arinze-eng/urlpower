@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:natproxy/auth/auth_gate.dart';
 import 'package:natproxy/config/app_theme.dart';
+import 'package:natproxy/screens/entry_screen.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/screens/account_screen.dart';
 import 'package:natproxy/screens/auth/resend_verification_screen.dart';
@@ -9,6 +10,7 @@ import 'package:natproxy/screens/client_screen.dart';
 import 'package:natproxy/screens/client_settings_screen.dart';
 import 'package:natproxy/screens/server_screen.dart';
 import 'package:natproxy/screens/server_settings_screen.dart';
+import 'package:natproxy/screens/speed_test_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
@@ -25,15 +27,23 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'CDN-NETSHARE',
       theme: AppTheme.dark(),
-      home: const AuthGate(),
+      home: const EntryScreen(),
       routes: {
         '/sign-up': (context) => const SignUpScreen(),
         '/resend-verification': (context) => const ResendVerificationScreen(),
         '/account': (context) => const AccountScreen(),
         '/server': (context) => const ServerScreen(),
-        '/client': (context) => const ClientScreen(),
+        '/client': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map) {
+            final code = args['code'] as String?;
+            return ClientScreen(initialCode: code);
+          }
+          return const ClientScreen();
+        },
         '/server-settings': (context) => const ServerSettingsScreen(),
         '/client-settings': (context) => const ClientSettingsScreen(),
+        '/speed-test': (context) => const SpeedTestScreen(),
       },
     );
   }

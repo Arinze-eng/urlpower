@@ -1,0 +1,9 @@
+version: "3.8"
+services:
+  signalserver:
+    build: .
+    container_name: signalserver
+    restart: unless-stopped
+    ports:
+      - "5601:5601/tcp"
+      - "3478:3478/udp"

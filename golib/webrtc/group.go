@@ -204,6 +204,19 @@ func (g *ServerGroup) GetStats() (bytesUp, bytesDown int64) {
 	return
 }
 
+// GetUsageDown returns aggregated coarse download categorization.
+func (g *ServerGroup) GetUsageDown() (web, video, other int64) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for _, s := range g.servers {
+		w, v, o := s.GetUsageDown()
+		web += w
+		video += v
+		other += o
+	}
+	return
+}
+
 // GetStreamDistribution returns per-session stream counts across all PCs.
 func (g *ServerGroup) GetStreamDistribution() []int {
 	g.mu.Lock()

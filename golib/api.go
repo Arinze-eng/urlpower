@@ -3,6 +3,7 @@
 package golib
 
 import (
+	"bytes"
 	"context"
 	crypto_rand "crypto/rand"
 	"encoding/hex"
@@ -36,6 +37,102 @@ type ProtectFunc interface {
 	Protect(fd int) bool
 }
 
+// SpeedTestDirect runs a standalone internet speed test (no tunnel).
+// It measures real transfer speed using Cloudflare's speed test endpoints.
+// Result JSON:
+// {
+//   "download_mbps": 123.4,
+//   "upload_mbps": 45.6,
+//   "download_bytes": 25000000,
+//   "upload_bytes": 10000000,
+//   "download_ms": 1234,
+//   "upload_ms": 2345
+// }
+// or {"error":"msg"}
+func SpeedTestDirect() string {
+	// Conservative timeouts so it doesn't hang forever on poor networks.
+	downloadSizes := []int{5_000_000, 15_000_000, 25_000_000}
+	uploadSizes := []int{3_000_000, 7_000_000}
+
+	type result struct {
+		DownloadMbps  float64 `json:"download_mbps"`
+		UploadMbps    float64 `json:"upload_mbps"`
+		DownloadBytes int     `json:"download_bytes"`
+		UploadBytes   int     `json:"upload_bytes"`
+		DownloadMs    int64   `json:"download_ms"`
+		UploadMs      int64   `json:"upload_ms"`
+		Error         string  `json:"error,omitempty"`
+	}
+
+	hc := &http.Client{Timeout: 45 * time.Second}
+
+	dlBestMbps := 0.0
+	dlBestBytes := 0
+	dlBestMs := int64(0)
+	for _, sz := range downloadSizes {
+		url := fmt.Sprintf("%s?bytes=%d", speedTestDownURL, sz)
+		start := time.Now()
+		resp, err := hc.Get(url)
+		if err != nil {
+			continue
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		ms := time.Since(start).Milliseconds()
+		if ms <= 0 {
+			continue
+		}
+		mbps := (float64(sz) * 8.0) / (float64(ms) / 1000.0) / 1e6
+		if mbps > dlBestMbps {
+			dlBestMbps = mbps
+			dlBestBytes = sz
+			dlBestMs = ms
+		}
+	}
+
+	upBestMbps := 0.0
+	upBestBytes := 0
+	upBestMs := int64(0)
+	for _, sz := range uploadSizes {
+		payload := make([]byte, sz)
+		// It's fine if payload is zeros; we only need real transfer.
+		url := fmt.Sprintf("%s?bytes=%d", speedTestUpURL, sz)
+		start := time.Now()
+		resp, err := hc.Post(url, "application/octet-stream", bytes.NewReader(payload))
+		if err != nil {
+			continue
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		ms := time.Since(start).Milliseconds()
+		if ms <= 0 {
+			continue
+		}
+		mbps := (float64(sz) * 8.0) / (float64(ms) / 1000.0) / 1e6
+		if mbps > upBestMbps {
+			upBestMbps = mbps
+			upBestBytes = sz
+			upBestMs = ms
+		}
+	}
+
+	if dlBestMbps == 0   {
+		data, _ := json.Marshal(map[string]string{"error": "speed test failed (no successful download probe)"})
+		return string(data)
+	}
+
+	out := result{
+		DownloadMbps:  dlBestMbps,
+		UploadMbps:    upBestMbps,
+		DownloadBytes: dlBestBytes,
+		UploadBytes:   upBestBytes,
+		DownloadMs:    dlBestMs,
+		UploadMs:      upBestMs,
+	}
+	data, _ := json.Marshal(out)
+	return string(data)
+}
+
 const (
 	maxReconnects = 2
 
@@ -50,6 +147,10 @@ const (
 	latencyTestURL        = "http://cp.cloudflare.com"
 	latencyDialTimeout    = 5 * time.Second
 	latencyRequestTimeout = 10 * time.Second
+
+	// Cloudflare speed test endpoints (real network transfer)
+	speedTestDownURL = "https://speed.cloudflare.com/__down"
+	speedTestUpURL   = "https://speed.cloudflare.com/__up"
 	latencyAutoDelay      = 2 * time.Second // delay before auto latency test
 )
 
@@ -187,9 +288,6 @@ type connectionInfo struct {
 type serverConfig struct {
 	ListenPort   int    `json:"listenPort"`
 	StunServer   string `json:"stunServer"`
-	TurnServer   string `json:"turnServer"`    // TURN server URL
-	TurnUsername string `json:"turnUsername"`  // TURN username
-	TurnPassword string `json:"turnPassword"`  // TURN password
 	SignalingURL string `json:"signalingUrl"`
 	DiscoveryURL string `json:"discoveryUrl"`
 	NatMethod    string `json:"natMethod"`
@@ -373,6 +471,22 @@ func StartServer(settingsJSON string) (string, error) {
 		}
 	}
 
+	// Normalize user-provided URLs and ICE settings.
+	if v, err := util.NormalizeHTTPBase(cfg.SignalingURL); err == nil {
+		cfg.SignalingURL = v
+	} else {
+		return "", fmt.Errorf("invalid signalingUrl: %w", err)
+	}
+	if cfg.DiscoveryURL == "" {
+		cfg.DiscoveryURL = cfg.SignalingURL
+	}
+	if v, err := util.NormalizeHTTPBase(cfg.DiscoveryURL); err == nil {
+		cfg.DiscoveryURL = v
+	} else {
+		return "", fmt.Errorf("invalid discoveryUrl: %w", err)
+	}
+	cfg.StunServer = strings.TrimSpace(cfg.StunServer)
+
 	applog.SetMaskIPs(cfg.MaskIPs)
 
 	uuid := cfg.UUID
@@ -464,8 +578,8 @@ func StartServer(settingsJSON string) (string, error) {
 	applog.Info("Falling back to WebRTC hole punch...")
 
 	iceServers := []string{
-		"stun:" + cfg.StunServer,
-		"stun:" + defaultStunServer2,
+		util.NormalizeICEServer(cfg.StunServer),
+		util.NormalizeICEServer(defaultStunServer2),
 	}
 
 	// Generate obfuscation key for DPI resistance (32 bytes → AES-256-GCM)
@@ -475,7 +589,10 @@ func StartServer(settingsJSON string) (string, error) {
 	}
 	applog.Info("Generated UDP obfuscation key for WebRTC path (AES-256-GCM)")
 
-	sessionID := generateUUID()
+	sessionID := offer.SessionID
+	if sessionID == "" {
+		sessionID = generateUUID()
+	}
 	applog.Infof("Holepunch session ID: %s", sessionID)
 
 	// Derive UDP relay address from signaling server for NAT fallback
@@ -529,12 +646,6 @@ func StartServer(settingsJSON string) (string, error) {
 	npc := cfg.NumPeerConnections
 	if npc <= 0 {
 		npc = 1
-	}
-
-	// Add TURN servers to ICE servers if configured
-	if cfg.TurnServer != "" {
-		iceServers = append(iceServers, cfg.TurnServer)
-		applog.Infof("Added TURN server: %s", cfg.TurnServer)
 	}
 
 	wrtcGroup, sdpOffers, err := startServerGroupWithSrflx(npc, iceServers, obfsKey, relayAddr, sessionID, srvOpts)
@@ -1077,8 +1188,8 @@ func StartServerManual(settingsJSON string) (string, error) {
 	applog.SetMaskIPs(cfg.MaskIPs)
 
 	iceServers := []string{
-		"stun:" + cfg.StunServer,
-		"stun:" + defaultStunServer2,
+		util.NormalizeICEServer(cfg.StunServer),
+		util.NormalizeICEServer(defaultStunServer2),
 	}
 
 	// Generate obfuscation key (32 bytes → AES-256-GCM)
@@ -1159,7 +1270,8 @@ func StartServerManual(settingsJSON string) (string, error) {
 
 	// Build manual offer
 	offer := &signaling.ManualOffer{
-		Version:              3,
+		Version:              4,
+		SessionID:            sessionID,
 		ObfsKey:              hex.EncodeToString(obfsKey),
 		RelayAddr:            relayAddr,
 		NumChannels:          cfg.NumChannels,
@@ -1238,8 +1350,8 @@ func AcceptManualAnswer(answerCode string) error {
 	}
 	mu.Unlock()
 
-	// Wait for connection (65s timeout for single PC)
-	timeout := 65 * time.Second
+	// Wait for connection (poor networks may need longer)
+	timeout := 120 * time.Second
 	applog.Info("AcceptManualAnswer: waiting for WebRTC connection...")
 	if err := wrtcGroup.WaitConnected(timeout); err != nil {
 		return fmt.Errorf("WebRTC connection: %w", err)
@@ -1321,8 +1433,8 @@ func ProcessManualOffer(offerCode string, settingsJSON string) (string, error) {
 	applog.Infof("ProcessManualOffer: SDP decompressed (%d bytes), nc=%d", len(sdp), offer.NumChannels)
 
 	iceServers := []string{
-		"stun:" + cfg.StunServer,
-		"stun:" + defaultStunServer2,
+		util.NormalizeICEServer(cfg.StunServer),
+		util.NormalizeICEServer(defaultStunServer2),
 	}
 
 	obfsKey, _ := hex.DecodeString(offer.ObfsKey)
@@ -1376,7 +1488,7 @@ func ProcessManualOffer(offerCode string, settingsJSON string) (string, error) {
 	}
 
 	manualAnswer := &signaling.ManualAnswer{
-		Version:       3,
+		Version:       4,
 		CompressedSDP: compressedAnswer,
 	}
 
@@ -1395,7 +1507,7 @@ func ProcessManualOffer(offerCode string, settingsJSON string) (string, error) {
 		ObfsKey:              offer.ObfsKey,
 		RelayAddr:            offer.RelayAddr,
 		Padding:              offer.Padding,
-		Version:              3,
+		Version:              4,
 		TransportV:           offer.TransportV,
 		NumPeerConns:         1,
 		NumChannels:          offer.NumChannels,
@@ -1456,6 +1568,7 @@ func GetServerStatus() string {
 	var bytesUp, bytesDown int64
 	var dataChannels, peerConns int
 	var streamDist []int
+	var webDown, videoDown, otherDown int64
 
 	switch serverMethod {
 	case "holepunch":
@@ -1467,12 +1580,20 @@ func GetServerStatus() string {
 			dataChannels = activeWebRTCServerGroup.GetChannelCount()
 			peerConns = activeWebRTCServerGroup.Count()
 			streamDist = activeWebRTCServerGroup.GetStreamDistribution()
+			w, v, o := activeWebRTCServerGroup.GetUsageDown()
+			webDown += w
+			videoDown += v
+			otherDown += o
 		}
 		for _, g := range drainingWebRTCServerGroups {
 			clientCount += g.GetClientCount()
 			up, down := g.GetStats()
 			bytesUp += up
 			bytesDown += down
+			w, v, o := g.GetUsageDown()
+			webDown += w
+			videoDown += v
+			otherDown += o
 		}
 	default:
 		clientCount = xray.GetClientCount()
@@ -1506,6 +1627,9 @@ func GetServerStatus() string {
 		"peerConnections": peerConns,
 		"smuxStreams":     clientCount,
 		"streamDist":      streamDist,
+		"webDown":         webDown,
+		"videoDown":       videoDown,
+		"otherDown":       otherDown,
 	}
 	if serverInfo != nil {
 		status["publicIP"] = serverInfo.PublicIP
@@ -1594,6 +1718,14 @@ func StartClient(connectionCode string, tunFd int, protectFd ProtectFunc, settin
 			return fmt.Errorf("parse settings: %w", err)
 		}
 	}
+
+	// Normalize user-provided signaling URL and ICE settings.
+	if v, err := util.NormalizeHTTPBase(cfg.SignalingURL); err == nil {
+		cfg.SignalingURL = v
+	} else {
+		return fmt.Errorf("invalid signalingUrl: %w", err)
+	}
+	cfg.StunServer = strings.TrimSpace(cfg.StunServer)
 
 	applog.SetMaskIPs(cfg.MaskIPs)
 
@@ -1705,8 +1837,8 @@ func ConnectWebRTC(connectionCode string, settingsJSON string) error {
 	// No protectFn — no TUN exists, traffic routes normally
 
 	iceServers := []string{
-		"stun:" + cfg.StunServer,
-		"stun:" + defaultStunServer2,
+		util.NormalizeICEServer(cfg.StunServer),
+		util.NormalizeICEServer(defaultStunServer2),
 	}
 
 	obfsKey, _ := hex.DecodeString(info.ObfsKey)
@@ -1888,7 +2020,8 @@ func StartTunnel(tunFd int, protectFd ProtectFunc, settingsJSON string) error {
 	applog.Info("StartTunnel: creating TUN tunnel...")
 	tun, err := tunnel.StartTunnelWithOptions(tunFd, "", cfg.TunAddress, cfg.MTU, cfg.DNS1, protectCallback, tunnel.TunnelOptions{
 		DNS2Addr:       cfg.DNS2,
-		AllowDirectDNS: cfg.AllowDirectDNS,
+		// Force all DNS through the tunnel to avoid leaks.
+		AllowDirectDNS: false,
 		DialStream:     wrtcGroup.DialStream,
 	})
 	if err != nil {
@@ -1981,8 +2114,8 @@ func startClientWebRTC(ctx context.Context, info connectionInfo, cfg clientConfi
 
 	// Start WebRTC client group
 	iceServers := []string{
-		"stun:" + cfg.StunServer,
-		"stun:" + defaultStunServer2,
+		util.NormalizeICEServer(cfg.StunServer),
+		util.NormalizeICEServer(defaultStunServer2),
 	}
 
 	obfsKey, _ := hex.DecodeString(info.ObfsKey)
@@ -2581,6 +2714,7 @@ func GetPublicIP() string {
 // Uses DialStream for WebRTC or SOCKS5 for the xray path.
 // Result JSON: {"latency_ms": 123} or {"error": "msg"}.
 func TestLatency() string {
+
 	mu.Lock()
 	running := clientRunning
 	port := clientSocksPort

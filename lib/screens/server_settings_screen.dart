@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/settings_model.dart';
 import '../services/settings_service.dart';
+import '../utils/url_utils.dart';
 import '../widgets/app_background.dart';
 import '../services/name_generator.dart';
 
@@ -18,9 +19,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
 
   late TextEditingController _portController;
   late TextEditingController _stunController;
-  late TextEditingController _turnServerController;
-  late TextEditingController _turnUsernameController;
-  late TextEditingController _turnPasswordController;
   late TextEditingController _signalingController;
   late TextEditingController _discoveryUrlController;
   late TextEditingController _displayNameController;
@@ -87,9 +85,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     super.initState();
     _portController = TextEditingController();
     _stunController = TextEditingController();
-    _turnServerController = TextEditingController();
-    _turnUsernameController = TextEditingController();
-    _turnPasswordController = TextEditingController();
     _signalingController = TextEditingController();
     _discoveryUrlController = TextEditingController();
     _displayNameController = TextEditingController();
@@ -158,9 +153,9 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
 
     final settings = ServerSettings(
       listenPort: int.parse(_portController.text.trim()),
-      stunServer: _stunController.text.trim(),
-      signalingUrl: _signalingController.text.trim(),
-      discoveryUrl: _discoveryUrlController.text.trim(),
+      stunServer: UrlUtils.normalizeIceServer(_stunController.text),
+      signalingUrl: UrlUtils.normalizeHttpBaseUrl(_signalingController.text),
+      discoveryUrl: UrlUtils.normalizeHttpBaseUrl(_discoveryUrlController.text),
       natMethod: _natMethod,
       discoveryEnabled: _discoveryEnabled,
       displayName: displayName,
@@ -369,6 +364,8 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
             child: const Text('Reset'),
           ),
         ],
+      ),
+        ),
       ),
     );
     if (confirmed == true) {

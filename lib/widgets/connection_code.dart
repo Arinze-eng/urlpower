@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'deep_link_block.dart';
 
 class ConnectionCodeDisplay extends StatelessWidget {
   final String code;
+  final bool showQr;
 
-  const ConnectionCodeDisplay({super.key, required this.code});
+  const ConnectionCodeDisplay({
+    super.key,
+    required this.code,
+    this.showQr = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +76,31 @@ class ConnectionCodeDisplay extends StatelessWidget {
               'Share this code with the client device.',
               style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
+            const SizedBox(height: 12),
+            if (showQr) ...[
+              _DeepLinkBlock(code: code),
+              const SizedBox(height: 12),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: QrImageView(
+                    data: _DeepLinkBlock.buildConnectLink(code),
+                    size: 180,
+                    backgroundColor: Colors.white,
+                    errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tip: client can scan this QR with any camera.',
+                style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
           ],
         ),
       ),

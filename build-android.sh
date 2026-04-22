@@ -18,7 +18,7 @@ ARCH="$1"
 SPLIT="${2:-}"
 
 case "$ARCH" in
-    arm)       TARGETS="android/arm64" ;;
+    arm)       TARGETS="android/arm64,android/arm" ;;
     x86)       TARGETS="android/amd64,android/386" ;;
     universal) TARGETS="android/arm64,android/arm,android/amd64,android/386" ;;
     *)         echo "Unknown arch: $ARCH"; usage ;;

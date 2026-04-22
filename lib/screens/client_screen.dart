@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:app_links/app_links.dart';
 import '../models/settings_model.dart';
 import '../models/server_listing.dart';
 import '../services/platform_bridge.dart';
@@ -13,6 +14,7 @@ import '../widgets/connection_code.dart';
 import '../widgets/log_panel.dart';
 import '../widgets/server_list.dart';
 import '../widgets/app_background.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 const _kLogPollInterval = Duration(milliseconds: 500);
 const _kStatusPollInterval = Duration(seconds: 1);
@@ -20,7 +22,8 @@ const _kLatencyGoodMs = 100;
 const _kLatencyWarningMs = 300;
 
 class ClientScreen extends StatefulWidget {
-  const ClientScreen({super.key});
+  final String? initialCode;
+  const ClientScreen({super.key, this.initialCode});
 
   @override
   State<ClientScreen> createState() => _ClientScreenState();
@@ -28,6 +31,7 @@ class ClientScreen extends StatefulWidget {
 
 class _ClientScreenState extends State<ClientScreen>
     with WidgetsBindingObserver {
+  StreamSubscription<Uri>? _deepLinkSub;
   final _codeController = TextEditingController();
   bool _isConnected = false;
   bool _isConnecting = false;
@@ -67,13 +71,61 @@ class _ClientScreenState extends State<ClientScreen>
     _statusSub = PlatformBridge.statusStream.listen(_onPlatformEvent);
     _loadSettings();
     _syncState();
+    _listenDeepLinks();
+
+    // If opened via deep link / passed argument.
+    final initCode = widget.initialCode;
+    if (initCode != null && initCode.trim().isNotEmpty) {
+      _codeController.text = initCode.trim();
+      // Auto start connection for a 1-tap flow.
+      Future.microtask(() {
+        if (mounted && !_isConnected && !_isConnecting) {
+          _connect(_codeController.text);
+        }
+      });
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Deep link may arrive while resumed; no special handling needed.
+
     if (state == AppLifecycleState.resumed && !_isConnecting) {
       _syncState();
     }
+  }
+
+  void _listenDeepLinks() {
+    final appLinks = AppLinks();
+    _deepLinkSub = appLinks.uriLinkStream.listen((uri) {
+      if (uri.scheme != 'natproxy') return;
+      if (uri.host != 'connect') return;
+
+      final code = uri.queryParameters['code'];
+      final offer = uri.queryParameters['offer'];
+      final answer = uri.queryParameters['answer'];
+
+      // Client side: accept code/offer and connect.
+      if (answer == null || answer.isEmpty) {
+        final payload = (offer != null && offer.isNotEmpty) ? offer : code;
+        if (payload == null || payload.isEmpty) return;
+
+        setState(() {
+          _codeController.text = payload;
+        });
+
+        if (!_isConnected && !_isConnecting) {
+          _connect(payload);
+        }
+        return;
+      }
+
+      // If an answer link is opened on the receiver device by mistake, just ignore.
+      // (Host device handles answer links and pastes into the Server screen.)
+      return;
+    }, onError: (_) {
+      // ignore
+    });
   }
 
   void _onPlatformEvent(Map<String, dynamic> event) {
@@ -333,7 +385,9 @@ class _ClientScreenState extends State<ClientScreen>
 
     try {
       // Wait for server to accept our answer (blocks until ICE connects)
-      await PlatformBridge.waitManualConnection(120);
+      // Wait for server acceptance and ICE connection.
+      // 120s helps on poor networks.
+      await PlatformBridge.waitManualConnection(180);
       if (!mounted || !_isConnecting) return;
 
       final settingsJson = jsonEncode(_settings.toJson());
@@ -543,6 +597,7 @@ class _ClientScreenState extends State<ClientScreen>
   void dispose() {
     _disconnectDiscoveryStream();
     _statusSub?.cancel();
+    _deepLinkSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _codeController.dispose();
     super.dispose();
@@ -577,22 +632,60 @@ class _ClientScreenState extends State<ClientScreen>
                 style: TextStyle(fontSize: 13),
               ),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SelectableText(
-                  _answerCode,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                  ),
-                ),
-              ),
+              Builder(builder: (context) {
+                final link = Uri(
+                  scheme: 'natproxy',
+                  host: 'connect',
+                  queryParameters: {'answer': _answerCode},
+                ).toString();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SelectableText(
+                        _answerCode,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: QrImageView(
+                          data: link,
+                          size: 180,
+                          backgroundColor: Colors.white,
+                          errorCorrectionLevel: QrErrorCorrectLevel.M,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'You can scan this QR on the host device to copy the answer faster.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                );
+              }),
               const SizedBox(height: 12),
               Row(
                 children: [

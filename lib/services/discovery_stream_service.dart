@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import '../models/server_listing.dart';
+import '../utils/url_utils.dart';
 
 enum DiscoveryStreamState { disconnected, connecting, connected, error }
 
@@ -29,7 +30,7 @@ class DiscoveryStreamService {
   String _room = '';
 
   void connect(String signalingUrl, {String room = ''}) {
-    _signalingUrl = signalingUrl;
+    _signalingUrl = UrlUtils.normalizeHttpBaseUrl(signalingUrl);
     _room = room;
     _permanentlyClosed = false;
     _backoff = _initialBackoff;

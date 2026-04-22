@@ -12,10 +12,6 @@ import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
-import android.net.NetworkInterface
-import java.net.Inet4Address
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -134,6 +130,7 @@ class MainActivity : FlutterActivity() {
                 "getLogs" -> getLogs(call.argument<Int>("cursor") ?: 0, result)
                 "clearLogs" -> clearLogs(result)
                 "testLatency" -> testLatency(result)
+                "speedTestDirect" -> speedTestDirect(result)
                 "registerDiscovery" -> {
                     val code = call.argument<String>("code") ?: ""
                     val settings = call.argument<String>("settings") ?: "{}"
@@ -147,9 +144,6 @@ class MainActivity : FlutterActivity() {
                     listServers(discoveryUrl, room, result)
                 }
                 "requestBatteryOptimization" -> requestBatteryOptimization(result)
-                "getLocalIpAddress" -> {
-                    result.success(getLocalIpAddress())
-                }
                 "startServerManual" -> {
                     val settings = call.argument<String>("settings") ?: "{}"
                     startServerManual(settings, result)
@@ -197,28 +191,6 @@ class MainActivity : FlutterActivity() {
         statusEventSink = null
         goExecutor.shutdownNow()
         super.onDestroy()
-    }
-
-    private fun getLocalIpAddress(): String {
-        try {
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val iface = interfaces.nextElement()
-                if (iface.isLoopback || !iface.isUp) continue
-                if (iface.name.startsWith("tun") || iface.name.startsWith("vpn")) continue
-                
-                val addresses = iface.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val addr = addresses.nextElement()
-                    if (!addr.isLoopbackAddress && addr is Inet4Address) {
-                        return addr.hostAddress
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "getLocalIpAddress failed", e)
-        }
-        return "127.0.0.1"
     }
 
     private fun requestVpnPermission(result: MethodChannel.Result) {
@@ -422,6 +394,11 @@ class MainActivity : FlutterActivity() {
 
     private fun testLatency(result: MethodChannel.Result) {
         runGoCall(TIMEOUT_LATENCY, result, "LATENCY_ERROR") { GoBridge.testLatency() }
+    }
+
+    private fun speedTestDirect(result: MethodChannel.Result) {
+        // More time: real download/upload
+        runGoCall(90L, result, "SPEEDTEST_ERROR") { GoBridge.speedTestDirect() }
     }
 
     private fun detectNatType(result: MethodChannel.Result) {

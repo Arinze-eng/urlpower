@@ -93,6 +93,10 @@ class GoBridge {
             return Golib.testLatency()
         }
 
+        fun speedTestDirect(): String {
+            return Golib.speedTestDirect()
+        }
+
         fun registerDiscovery(code: String, settingsJson: String): String {
             Log.d(TAG, "registerDiscovery called")
             return Golib.registerServerDiscovery(code, settingsJson)

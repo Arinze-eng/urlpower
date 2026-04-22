@@ -11,9 +11,35 @@ import '../widgets/connection_code.dart';
 import '../widgets/vless_link.dart';
 import '../widgets/log_panel.dart';
 import '../widgets/app_background.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:app_links/app_links.dart';
 
 const _kLogPollInterval = Duration(milliseconds: 500);
 const _kStatusPollInterval = Duration(seconds: 2);
+
+Widget _hostActivePill(BuildContext context, bool active) {
+  final cs = Theme.of(context).colorScheme;
+  final bg = active ? Colors.green.withOpacity(0.15) : cs.surfaceContainerHighest;
+  final fg = active ? Colors.green.shade700 : cs.onSurfaceVariant;
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: fg.withOpacity(0.35)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(active ? Icons.wifi_tethering_rounded : Icons.wifi_off_rounded,
+            size: 16, color: fg),
+        const SizedBox(width: 6),
+        Text(active ? 'Host Active' : 'Host Inactive',
+            style: TextStyle(fontWeight: FontWeight.w700, color: fg)),
+      ],
+    ),
+  );
+}
 
 class ServerScreen extends StatefulWidget {
   const ServerScreen({super.key});
@@ -24,6 +50,7 @@ class ServerScreen extends StatefulWidget {
 
 class _ServerScreenState extends State<ServerScreen>
     with WidgetsBindingObserver {
+  StreamSubscription<Uri>? _deepLinkSub;
   bool _isRunning = false;
   bool _isStarting = false;
   String _connectionCode = '';
@@ -36,6 +63,11 @@ class _ServerScreenState extends State<ServerScreen>
   int _totalPeers = 0;
   int _bytesUp = 0;
   int _bytesDown = 0;
+
+  // Coarse usage breakdown (server-side best-effort heuristics)
+  int _webDown = 0;
+  int _videoDown = 0;
+  int _otherDown = 0;
   double _rateUp = 0;
   double _rateDown = 0;
   double _uptimeSec = 0;
@@ -69,14 +101,41 @@ class _ServerScreenState extends State<ServerScreen>
     _syncState();
     _detectNatType();
     PlatformBridge.requestBatteryOptimization();
+    _listenDeepLinks();
   }
 
   @override
   void dispose() {
     _statusSub?.cancel();
+    _deepLinkSub?.cancel();
     _answerController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _listenDeepLinks() {
+    final appLinks = AppLinks();
+    _deepLinkSub = appLinks.uriLinkStream.listen((uri) {
+      if (uri.scheme != 'natproxy') return;
+      if (uri.host != 'connect') return;
+
+      final answer = uri.queryParameters['answer'];
+      if (answer == null || answer.isEmpty) return;
+
+      // If we are not already in manual flow, bring the user there.
+      setState(() {
+        _manualStep = _manualStep == 0 ? 2 : _manualStep;
+        _answerController.text = answer;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Answer received. Tap Accept to connect.')),
+        );
+      }
+    }, onError: (_) {
+      // ignore
+    });
   }
 
   void _onPlatformEvent(Map<String, dynamic> event) {
@@ -142,6 +201,9 @@ class _ServerScreenState extends State<ServerScreen>
             _totalPeers = status['totalPeers'] as int? ?? 0;
             _bytesUp = status['bytesUp'] as int? ?? 0;
             _bytesDown = status['bytesDown'] as int? ?? 0;
+            _webDown = status['webDown'] as int? ?? 0;
+            _videoDown = status['videoDown'] as int? ?? 0;
+            _otherDown = status['otherDown'] as int? ?? 0;
             _rateUp = (status['rateUp'] as num?)?.toDouble() ?? 0;
             _rateDown = (status['rateDown'] as num?)?.toDouble() ?? 0;
             _uptimeSec = (status['uptimeSec'] as num?)?.toDouble() ?? 0;
@@ -307,6 +369,15 @@ class _ServerScreenState extends State<ServerScreen>
     final answerCode = _answerController.text.trim();
     if (answerCode.isEmpty) {
       setState(() => _error = 'Please paste the answer code');
+      return;
+    }
+
+    // Quick validation to reduce common copy/paste mistakes.
+    if (!answerCode.startsWith('M1A:')) {
+      setState(
+        () => _error =
+            'Invalid answer code. It should start with "M1A:" (manual answer).',
+      );
       return;
     }
 
@@ -480,6 +551,53 @@ class _ServerScreenState extends State<ServerScreen>
     return '${dur.inSeconds}s';
   }
 
+  Widget _usageRow(
+    BuildContext context, {
+    required String label,
+    required int bytes,
+    required int total,
+    required Color color,
+  }) {
+    final pct = total > 0 ? (bytes / total).clamp(0.0, 1.0) : 0.0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              Text(
+                _formatBytes(bytes),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${(pct * 100).toStringAsFixed(0)}%',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 8,
+              backgroundColor: Colors.white10,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildManualWizard() {
     switch (_manualStep) {
       case 1:
@@ -529,22 +647,76 @@ class _ServerScreenState extends State<ServerScreen>
                   style: TextStyle(fontSize: 13),
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: SelectableText(
-                    _offerCode,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
+                Builder(builder: (context) {
+                  final link = Uri(
+                    scheme: 'natproxy',
+                    host: 'connect',
+                    queryParameters: {'code': _offerCode},
+                  ).toString();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(
+                          _offerCode,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Tap-to-open Link (recommended)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: SelectableText(
+                          link,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: QrImageView(
+                            data: link,
+                            size: 180,
+                            backgroundColor: Colors.white,
+                            errorCorrectionLevel: QrErrorCorrectLevel.M,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -611,10 +783,20 @@ class _ServerScreenState extends State<ServerScreen>
                 TextField(
                   controller: _answerController,
                   maxLines: 3,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Paste M1A:... code here',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     isDense: true,
+                    suffixIcon: IconButton(
+                      tooltip: 'Paste',
+                      icon: const Icon(Icons.paste_rounded),
+                      onPressed: () async {
+                        final data = await Clipboard.getData(Clipboard.kTextPlain);
+                        if (data?.text != null) {
+                          _answerController.text = data!.text!;
+                        }
+                      },
+                    ),
                   ),
                   style: const TextStyle(
                     fontFamily: 'monospace',
@@ -700,6 +882,11 @@ class _ServerScreenState extends State<ServerScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _hostActivePill(context, _isRunning),
+                  ),
+                  const SizedBox(height: 12),
                   StatusCard(
                     icon: _isRunning ? Icons.cloud_upload : Icons.cloud_off,
                     title: _isRunning ? 'Server Running' : 'Server Stopped',
@@ -772,6 +959,51 @@ class _ServerScreenState extends State<ServerScreen>
                         ),
                     ],
                   ),
+
+                  // Lightweight dashboard: shows what is routing through the host.
+                  if (_isRunning) ...[
+                    const SizedBox(height: 12),
+                    StatusCard(
+                      icon: Icons.dashboard,
+                      title: 'Routing dashboard (through host)',
+                      color: Colors.tealAccent,
+                      children: [
+                        const Text(
+                          'This is a best-effort breakdown based on destination ports. '
+                          'Content is not inspected (TLS is opaque).',
+                          style: TextStyle(fontSize: 12, color: Colors.white70),
+                        ),
+                        const SizedBox(height: 10),
+                        _usageRow(
+                          context,
+                          label: 'Web (80/443)',
+                          bytes: _webDown,
+                          total: _bytesDown,
+                          color: Colors.lightBlueAccent,
+                        ),
+                        _usageRow(
+                          context,
+                          label: 'Video / large HTTPS',
+                          bytes: _videoDown,
+                          total: _bytesDown,
+                          color: Colors.purpleAccent,
+                        ),
+                        _usageRow(
+                          context,
+                          label: 'Other',
+                          bytes: _otherDown,
+                          total: _bytesDown,
+                          color: Colors.orangeAccent,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Routing policy: client traffic (incl. DNS) is forced through the host tunnel.',
+                          style: TextStyle(fontSize: 12, color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   if (_error != null) ...[
                     const SizedBox(height: 16),
                     Card(

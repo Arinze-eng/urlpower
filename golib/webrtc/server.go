@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -70,8 +71,13 @@ type Server struct {
 	connectedOnce sync.Once
 	failedOnce    sync.Once
 	iceAlive      atomic.Bool // true when ICE is connected/completed
-	bytesUp       atomic.Int64 // bytes relayed: client → internet
-	bytesDown     atomic.Int64 // bytes relayed: internet → client
+	bytesUp   atomic.Int64 // bytes relayed: client → internet
+	bytesDown atomic.Int64 // bytes relayed: internet → client
+
+	// Coarse traffic categorization (best-effort heuristics)
+	webBytesDown   atomic.Int64 // mostly ports 80/443
+	videoBytesDown atomic.Int64 // large flows on 443
+	otherBytesDown atomic.Int64 // non-80/443
 	mu            sync.Mutex
 
 	// Configurable settings
@@ -244,14 +250,13 @@ func StartServer(iceServers []string, obfsKey []byte, relayAddr string, sessionI
 		switch state {
 		case pionwebrtc.ICEConnectionStateConnected, pionwebrtc.ICEConnectionStateCompleted:
 			s.iceAlive.Store(true)
-			applog.Success("webrtc server: ICE connection established")
 		case pionwebrtc.ICEConnectionStateDisconnected:
 			s.iceAlive.Store(false)
 			applog.Warn("webrtc server: ICE disconnected (may recover)")
 		case pionwebrtc.ICEConnectionStateFailed, pionwebrtc.ICEConnectionStateClosed:
 			s.iceAlive.Store(false)
 			s.failedOnce.Do(func() { close(s.failed) })
-			applog.Errorf("webrtc server: ICE connection failed. Possible causes: Symmetric NAT (needs TURN), Firewall blocking UDP, or unreachable STUN/TURN servers.")
+			applog.Warn("webrtc server: ICE connection lost, closing smux sessions")
 			s.closeSessions()
 		}
 	})
@@ -487,6 +492,11 @@ func (s *Server) GetStats() (bytesUp, bytesDown int64) {
 	return s.bytesUp.Load(), s.bytesDown.Load()
 }
 
+// GetUsageDown returns coarse download (downlink) categorization.
+func (s *Server) GetUsageDown() (web, video, other int64) {
+	return s.webBytesDown.Load(), s.videoBytesDown.Load(), s.otherBytesDown.Load()
+}
+
 // GetStreamDistribution returns the number of active smux streams per session.
 func (s *Server) GetStreamDistribution() []int {
 	s.mu.Lock()
@@ -569,13 +579,48 @@ func (s *Server) handleStream(stream *smux.Stream) {
 
 	// Count bytes flowing through the stream.
 	// Reads = data from client (upload), Writes = data to client (download).
-	streamRWC = &countingRWC{inner: streamRWC, bytesRead: &s.bytesUp, bytesWritten: &s.bytesDown}
+	// Also keep per-category downlink stats (heuristics).
+	var streamDown atomic.Int64
+	var tmpUp atomic.Int64
+	streamRWC = &countingRWC{
+		inner:        streamRWC,
+		bytesRead:    &s.bytesUp,
+		bytesWritten: &s.bytesDown,
+	}
+	// Wrap again just to capture *this stream's* down bytes.
+	// (tmpUp is unused but required by the wrapper signature.)
+	streamRWC = &countingRWC{inner: streamRWC, bytesRead: &tmpUp, bytesWritten: &streamDown}
 
 	target, err := readTargetAddr(streamRWC)
 	if err != nil {
 		applog.Warnf("webrtc server: read target addr: %v", err)
 		return
 	}
+
+	// Best-effort categorization (no payload inspection; TLS is opaque).
+	// We classify by destination port and whether the stream is large.
+	port := 0
+	if _, p, errSplit := net.SplitHostPort(target); errSplit == nil {
+		if v, errAtoi := strconv.Atoi(p); errAtoi == nil {
+			port = v
+		}
+	}
+	defer func() {
+		down := streamDown.Load()
+		if down <= 0 {
+			return
+		}
+		const videoThreshold = 10 * 1024 * 1024 // 10MB
+		if port == 443 && down >= videoThreshold {
+			s.videoBytesDown.Add(down)
+			return
+		}
+		if port == 80 || port == 443 {
+			s.webBytesDown.Add(down)
+			return
+		}
+		s.otherBytesDown.Add(down)
+	}()
 
 	// DNS channel: persistent multiplexed DNS relay (no TCP dial).
 	if target == DNSChannelTarget {

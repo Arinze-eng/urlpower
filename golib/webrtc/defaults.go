@@ -34,16 +34,16 @@ func applyPeerDefaults(cfg *PeerConfig) {
 		cfg.UDPWriteBuffer = 8192
 	}
 	if cfg.ICEDisconnTimeout == 0 {
-		cfg.ICEDisconnTimeout = 20000 // Increased from 15s to 20s
+		cfg.ICEDisconnTimeout = 15000
 	}
 	if cfg.ICEFailedTimeout == 0 {
-		cfg.ICEFailedTimeout = 45000 // Increased from 25s to 45s to allow TURN fallback
+		cfg.ICEFailedTimeout = 25000
 	}
 	if cfg.ICEKeepalive == 0 {
-		cfg.ICEKeepalive = 5000 // Increased from 2s to 5s
+		cfg.ICEKeepalive = 2000
 	}
 	if cfg.DTLSRetransmit == 0 {
-		cfg.DTLSRetransmit = 150 // Increased from 100ms to 150ms
+		cfg.DTLSRetransmit = 100
 	}
 	if cfg.DTLSSkipVerify == nil {
 		cfg.DTLSSkipVerify = boolPtr(true)

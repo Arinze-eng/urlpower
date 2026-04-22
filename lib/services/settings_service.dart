@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/settings_model.dart';
+import '../utils/url_utils.dart';
 
 class SettingsService {
   static final SettingsService _instance = SettingsService._();
@@ -21,14 +22,20 @@ class SettingsService {
       listenPort:
           prefs.getInt('server_listenPort') ?? ServerSettings.defaultListenPort,
       stunServer:
-          prefs.getString('server_stunServer') ??
-          ServerSettings.defaultStunServer,
+          UrlUtils.normalizeIceServer(
+            prefs.getString('server_stunServer') ??
+                ServerSettings.defaultStunServer,
+          ), // stored without stun: prefix
       signalingUrl:
-          prefs.getString('server_signalingUrl') ??
-          ServerSettings.defaultSignalingUrl,
+          UrlUtils.normalizeHttpBaseUrl(
+            prefs.getString('server_signalingUrl') ??
+                ServerSettings.defaultSignalingUrl,
+          ),
       discoveryUrl:
-          prefs.getString('server_discoveryUrl') ??
-          ServerSettings.defaultDiscoveryUrl,
+          UrlUtils.normalizeHttpBaseUrl(
+            prefs.getString('server_discoveryUrl') ??
+                ServerSettings.defaultDiscoveryUrl,
+          ),
       natMethod:
           prefs.getString('server_natMethod') ??
           ServerSettings.defaultNatMethod,
@@ -266,14 +273,20 @@ class SettingsService {
       dns1: prefs.getString('client_dns1') ?? ClientSettings.defaultDns1,
       dns2: prefs.getString('client_dns2') ?? ClientSettings.defaultDns2,
       stunServer:
-          prefs.getString('client_stunServer') ??
-          ClientSettings.defaultStunServer,
+          UrlUtils.normalizeIceServer(
+            prefs.getString('client_stunServer') ??
+                ClientSettings.defaultStunServer,
+          ),
       signalingUrl:
-          prefs.getString('client_signalingUrl') ??
-          ClientSettings.defaultSignalingUrl,
+          UrlUtils.normalizeHttpBaseUrl(
+            prefs.getString('client_signalingUrl') ??
+                ClientSettings.defaultSignalingUrl,
+          ),
       discoveryUrl:
-          prefs.getString('client_discoveryUrl') ??
-          ClientSettings.defaultDiscoveryUrl,
+          UrlUtils.normalizeHttpBaseUrl(
+            prefs.getString('client_discoveryUrl') ??
+                ClientSettings.defaultDiscoveryUrl,
+          ),
       discoveryEnabled: prefs.getBool('client_discoveryEnabled') ?? true,
       roomFilter: prefs.getString('client_roomFilter') ?? '',
       allowDirectDNS:

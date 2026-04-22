@@ -23,7 +23,7 @@ abstract final class AppTheme {
         elevation: 0,
         foregroundColor: Colors.white,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         elevation: 0,
         color: cs.surface.withOpacity(0.30),
         margin: EdgeInsets.zero,

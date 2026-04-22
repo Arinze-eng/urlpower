@@ -19,6 +19,7 @@ const (
 // encoded into a copy-paste-friendly string.
 type ManualOffer struct {
 	Version              int    `json:"v"`
+	SessionID            string `json:"sid,omitempty"`
 	ObfsKey              string `json:"ok"`
 	RelayAddr            string `json:"ra,omitempty"`
 	NumChannels          int    `json:"nc"`

@@ -26,76 +26,83 @@ class PaywallScreen extends StatelessWidget {
       body: AppBackground(
         child: SafeArea(
           child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 0),
-                    GlassCard(
-                      child: Row(
-                        children: [
-                          Container(
-                            height: 54,
-                            width: 54,
-                            decoration: BoxDecoration(
-                              color: cs.primary.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Icon(Icons.lock_outline, color: cs.primary),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 0),
+                  GlassCard(
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 54,
+                          width: 54,
+                          decoration: BoxDecoration(
+                            color: cs.primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  subtitle,
-                                  style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
+                          child: Icon(Icons.lock_outline, color: cs.primary),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 4),
+                              Text(subtitle, style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    GlassCard(
-                      padding: const EdgeInsets.all(22),
+                  ),
+                  const SizedBox(height: 14),
+                  GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          GradientButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const PaymentScreen()),
-                              );
+                          if (showPlans) ...[
+                            GradientButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const PaymentScreen()),
+                                );
+                              },
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.workspace_premium_outlined),
+                                  SizedBox(width: 10),
+                                  Text('Choose a plan'),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              await SupabaseConfig.client.auth.signOut();
                             },
-                            child: const Text('View plans & Upgrade'),
-                          ),
-                          const SizedBox(height: 14),
-                          OutlinedButton(
-                            onPressed: () => SupabaseConfig.client.auth.signOut(),
-                            child: const Text('Sign out'),
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text('Back to sign in'),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Tip: If you just signed up, make sure you verified your email first.',
-                      textAlign: TextAlign.center,
-                      style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    )
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Tip: If you just signed up, make sure you verified your email first.',
+                    textAlign: TextAlign.center,
+                    style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  )
+                ],
               ),
             ),
           ),
