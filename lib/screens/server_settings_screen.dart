@@ -365,8 +365,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
           ),
         ],
       ),
-        ),
-      ),
     );
     if (confirmed == true) {
       _applySettings(const ServerSettings());

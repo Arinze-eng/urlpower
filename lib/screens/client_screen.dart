@@ -235,12 +235,12 @@ class _ClientScreenState extends State<ClientScreen>
     if (_isConnected) {
       await _disconnect();
     } else {
-      await _connect();
+      await _connect(_codeController.text);
     }
   }
 
-  Future<void> _connect() async {
-    final code = _codeController.text.trim();
+  Future<void> _connect(String code) async {
+    code = code.trim();
     if (code.isEmpty) {
       debugPrint('ClientScreen: empty connection code');
       setState(() {
@@ -870,7 +870,7 @@ class _ClientScreenState extends State<ClientScreen>
                         onRefresh: _connectDiscoveryStream,
                         onServerTap: (server) {
                           _codeController.text = server.code;
-                          _connect();
+                          _connect(_codeController.text);
                         },
                       ),
                       const SizedBox(height: 16),
