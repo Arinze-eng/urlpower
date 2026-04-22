@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class _DeepLinkBlock extends StatelessWidget {
+class DeepLinkBlock extends StatelessWidget {
   final String code;
-  const _DeepLinkBlock({required this.code});
+  const DeepLinkBlock({required this.code});
 
   static String buildConnectLink(String code) {
     // Using the existing app deep-link scheme.
