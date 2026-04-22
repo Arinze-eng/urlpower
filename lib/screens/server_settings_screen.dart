@@ -4,6 +4,7 @@ import 'package:natproxy/services/settings_service.dart';
 import 'package:natproxy/services/name_generator.dart';
 import 'package:natproxy/widgets/app_background.dart';
 import 'package:natproxy/widgets/glass_card.dart';
+import 'package:uuid/uuid.dart';
 
 class ServerSettingsScreen extends StatefulWidget {
   const ServerSettingsScreen({super.key});
@@ -90,7 +91,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
   }
 
   void _applySettings(ServerSettings s) {
-    _portController.text = s.port.toString();
+    _portController.text = s.listenPort.toString();
     _stunController.text = s.stunServer;
     _signalingController.text = s.signalingUrl;
     _natMethod = s.natMethod;
@@ -103,7 +104,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     _socksUsernameController.text = s.socksUsername;
     _socksPasswordController.text = s.socksPassword;
     _socksUdp = s.socksUdp;
-    _uuidMode = s.uuidMode;
     _uuidController.text = s.uuid;
     _useRelay = s.useRelay;
     _transportMode = s.transportMode;
@@ -133,10 +133,8 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     _sctpZeroChecksum = s.sctpZeroChecksum;
     _disableCloseByDTLS = s.disableCloseByDTLS;
     _kcpMtuController.text = s.kcpMtu.toString();
-    _kcpSndWndController.text = s.kcpSndWnd.toString();
-    _kcpRcvWndController.text = s.kcpRcvWnd.toString();
-    _kcpReadBufferController.text = s.kcpReadBuffer.toString();
-    _kcpWriteBufferController.text = s.kcpWriteBuffer.toString();
+    _kcpReadBufferController.text = s.kcpReadBufferSize.toString();
+    _kcpWriteBufferController.text = s.kcpWriteBufferSize.toString();
     _xhttpPathController.text = s.xhttpPath;
   }
 
@@ -144,7 +142,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final s = ServerSettings(
-      port: int.parse(_portController.text),
+      listenPort: int.parse(_portController.text),
       stunServer: _stunController.text,
       signalingUrl: _signalingController.text,
       natMethod: _natMethod,
@@ -157,7 +155,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
       socksUsername: _socksUsernameController.text,
       socksPassword: _socksPasswordController.text,
       socksUdp: _socksUdp,
-      uuidMode: _uuidMode,
       uuid: _uuidController.text,
       useRelay: _useRelay,
       transportMode: _transportMode,
@@ -187,10 +184,8 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
       sctpZeroChecksum: _sctpZeroChecksum,
       disableCloseByDTLS: _disableCloseByDTLS,
       kcpMtu: int.parse(_kcpMtuController.text),
-      kcpSndWnd: int.parse(_kcpSndWndController.text),
-      kcpRcvWnd: int.parse(_kcpRcvWndController.text),
-      kcpReadBuffer: int.parse(_kcpReadBufferController.text),
-      kcpWriteBuffer: int.parse(_kcpWriteBufferController.text),
+      kcpReadBufferSize: int.parse(_kcpReadBufferController.text),
+      kcpWriteBufferSize: int.parse(_kcpWriteBufferController.text),
       xhttpPath: _xhttpPathController.text,
     );
 
@@ -213,7 +208,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset to Defaults'),
-        content: const Text('All server settings will be reverted to their default values. This does not save automatically.'),
+        content: const Text('All server settings will be reverted to their default values.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -226,7 +221,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
         ],
       ),
     );
-
     if (confirmed == true) {
       _applySettings(const ServerSettings());
     }
@@ -234,25 +228,17 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
 
   void _onProtocolChanged(String? value) {
     if (value == null) return;
-    setState(() {
-      _protocol = value;
-    });
+    setState(() => _protocol = value);
   }
 
   void _onTransportChanged(String? value) {
     if (value == null) return;
-    setState(() {
-      _transport = value;
-    });
+    setState(() => _transport = value);
   }
 
-  bool _isHolepunchSelected() {
-    return _natMethod == 'holepunch';
-  }
+  bool _isHolepunchSelected() => _natMethod == 'holepunch';
 
-  String _generateUuid() {
-    return const Uuid().v4();
-  }
+  String _generateUuid() => const Uuid().v4();
 
   String? _validatePort(String? value) {
     if (value == null || value.trim().isEmpty) return 'Required';
@@ -306,7 +292,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     _kcpRcvWndController.dispose();
     _kcpReadBufferController.dispose();
     _kcpWriteBufferController.dispose();
-    _xhttpPathController.text = '';
+    _xhttpPathController.dispose();
     _numPeerConnectionsController.dispose();
     _numChannelsController.dispose();
     _smuxStreamBufferController.dispose();
@@ -360,141 +346,67 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // === Network ===
-                        Text(
-                          'Network',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                        Text('Network', style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _portController,
-                          decoration: const InputDecoration(
-                            labelText: 'Listen Port',
-                            hintText: '10853',
-                            border: OutlineInputBorder(),
-                          ),
+                          decoration: const InputDecoration(labelText: 'Listen Port', border: OutlineInputBorder()),
                           keyboardType: TextInputType.number,
                           validator: _validatePort,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _stunController,
-                          decoration: const InputDecoration(
-                            labelText: 'STUN Server',
-                            hintText: 'stun.l.google.com:19302',
-                            border: OutlineInputBorder(),
-                          ),
+                          decoration: const InputDecoration(labelText: 'STUN Server', border: OutlineInputBorder()),
                           validator: _validateHostPort,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _signalingController,
-                          decoration: const InputDecoration(
-                            labelText: 'Signaling Server URL',
-                            hintText: 'http://[IP]:5601',
-                            border: OutlineInputBorder(),
-                          ),
+                          decoration: const InputDecoration(labelText: 'Signaling Server URL', border: OutlineInputBorder()),
                           keyboardType: TextInputType.url,
                           validator: _validateUrl,
                         ),
                         const SizedBox(height: 24),
-
-                        // === NAT Traversal ===
-                        Text(
-                          'NAT Traversal',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                        Text('NAT Traversal', style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           value: _natMethod,
-                          decoration: const InputDecoration(
-                            labelText: 'NAT Method',
-                            border: OutlineInputBorder(),
-                          ),
+                          decoration: const InputDecoration(labelText: 'NAT Method', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'auto', child: Text('Auto')),
                             DropdownMenuItem(value: 'upnp', child: Text('UPnP Only')),
                             DropdownMenuItem(value: 'holepunch', child: Text('Hole Punch Only (WebRTC)')),
                           ],
-                          onChanged: (value) {
-                            if (value != null) setState(() => _natMethod = value);
-                          },
+                          onChanged: (value) { if (value != null) setState(() => _natMethod = value); },
                         ),
-
                         if (_natMethod != 'holepunch') ...[
                           const SizedBox(height: 16),
-                          Text(
-                            'UPnP Settings',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
                           TextFormField(
                             controller: _upnpLeaseDurationController,
-                            decoration: const InputDecoration(
-                              labelText: 'Lease Duration (seconds)',
-                              hintText: '3600',
-                              helperText: '0-86400 (0 = indefinite)',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'Lease Duration (sec)', border: OutlineInputBorder()),
                             keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) return 'Required';
-                              final v = int.tryParse(value.trim());
-                              if (v == null || v < 0 || v > 86400) return '0-86400';
-                              return null;
-                            },
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _upnpRetriesController,
-                            decoration: const InputDecoration(
-                              labelText: 'Mapping Retries',
-                              hintText: '3',
-                              helperText: '1-10',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'Mapping Retries', border: OutlineInputBorder()),
                             keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) return 'Required';
-                              final v = int.tryParse(value.trim());
-                              if (v == null || v < 1 || v > 10) return '1-10';
-                              return null;
-                            },
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _ssdpTimeoutController,
-                            decoration: const InputDecoration(
-                              labelText: 'SSDP Timeout (seconds)',
-                              hintText: '3',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'SSDP Timeout (sec)', border: OutlineInputBorder()),
                             keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) return 'Required';
-                              final v = int.tryParse(value.trim());
-                              if (v == null || v < 1 || v > 30) return '1-30';
-                              return null;
-                            },
                           ),
                         ],
-
                         const SizedBox(height: 24),
-
                         if (!_isHolepunchSelected()) ...[
-                          Text(
-                            'Protocol & Transport',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
+                          Text('Protocol & Transport', style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
                             value: _protocol,
-                            decoration: const InputDecoration(
-                              labelText: 'Protocol',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'Protocol', border: OutlineInputBorder()),
                             items: const [
                               DropdownMenuItem(value: 'vless', child: Text('VLESS')),
                               DropdownMenuItem(value: 'socks', child: Text('SOCKS5')),
@@ -505,10 +417,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
                               value: _transport,
-                              decoration: const InputDecoration(
-                                labelText: 'Transport',
-                                border: OutlineInputBorder(),
-                              ),
+                              decoration: const InputDecoration(labelText: 'Transport', border: OutlineInputBorder()),
                               items: const [
                                 DropdownMenuItem(value: 'kcp', child: Text('KCP (UDP)')),
                                 DropdownMenuItem(value: 'xhttp', child: Text('xHTTP (TCP)')),
@@ -516,60 +425,23 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                               onChanged: _onTransportChanged,
                             ),
                           ],
-                          if (_protocol == 'vless') ...[
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Text('UUID', style: Theme.of(context).textTheme.titleSmall),
-                                const Spacer(),
-                                SegmentedButton<String>(
-                                  segments: const [
-                                    ButtonSegment(value: 'random', label: Text('Random')),
-                                    ButtonSegment(value: 'custom', label: Text('Custom')),
-                                  ],
-                                  selected: {_uuidMode},
-                                  onSelectionChanged: (value) => setState(() => _uuidMode = value.first),
-                                ),
-                              ],
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _uuidController,
+                            decoration: InputDecoration(
+                              labelText: 'UUID',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.refresh),
+                                onPressed: () => _uuidController.text = _generateUuid(),
+                              ),
                             ),
-                            if (_uuidMode == 'random')
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  'A new random UUID will be generated each time the server starts',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            if (_uuidMode == 'custom') ...[
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: _uuidController,
-                                decoration: InputDecoration(
-                                  labelText: 'UUID',
-                                  hintText: '00000000-0000-0000-0000-000000000000',
-                                  border: const OutlineInputBorder(),
-                                  suffixIcon: IconButton(
-                                    icon: const Icon(Icons.refresh),
-                                    tooltip: 'Generate UUID',
-                                    onPressed: () => _uuidController.text = _generateUuid(),
-                                  ),
-                                ),
-                                style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
-                                validator: _validateUuid,
-                              ),
-                            ],
-                          ],
+                            validator: _validateUuid,
+                          ),
                           const SizedBox(height: 24),
                         ] else ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Hole Punch uses WebRTC (ICE/DTLS/SCTP) for NAT traversal',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 8),
                           SwitchListTile(
                             title: const Text('UDP Relay Fallback'),
-                            subtitle: const Text('Route through signaling server when direct connection fails'),
                             value: _useRelay,
                             onChanged: (value) => setState(() => _useRelay = value),
                             contentPadding: EdgeInsets.zero,
@@ -577,47 +449,15 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
                             value: _transportMode,
-                            decoration: const InputDecoration(
-                              labelText: 'Transport Mode',
-                              border: OutlineInputBorder(),
-                            ),
+                            decoration: const InputDecoration(labelText: 'Transport Mode', border: OutlineInputBorder()),
                             items: const [
-                              DropdownMenuItem(value: 'datachannel', child: Text('Data Channel (default)')),
-                              DropdownMenuItem(value: 'media', child: Text('Media Stream (video call)')),
+                              DropdownMenuItem(value: 'datachannel', child: Text('Data Channel')),
+                              DropdownMenuItem(value: 'media', child: Text('Media Stream')),
                             ],
-                            onChanged: (value) {
-                              if (value != null) setState(() => _transportMode = value);
-                            },
-                          ),
-                          SwitchListTile(
-                            title: const Text('Disable IPv6'),
-                            value: _disableIPv6,
-                            onChanged: (value) => setState(() => _disableIPv6 = value),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _rateLimitUpController,
-                            decoration: const InputDecoration(
-                              labelText: 'Upload Rate Limit (KB/s)',
-                              hintText: '0 = unlimited',
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
-                          TextFormField(
-                            controller: _rateLimitDownController,
-                            decoration: const InputDecoration(
-                              labelText: 'Download Rate Limit (KB/s)',
-                              hintText: '0 = unlimited',
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
+                            onChanged: (value) { if (value != null) setState(() => _transportMode = value); },
                           ),
                           const SizedBox(height: 24),
                         ],
-
-                        // Save Button at bottom
                         SizedBox(
                           width: double.infinity,
                           height: 54,
@@ -626,7 +466,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                             child: const Text('Save Server Settings'),
                           ),
                         ),
-                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
