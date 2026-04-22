@@ -7,15 +7,17 @@
 
 // ignore_for_file: constant_identifier_names
 abstract final class EnvConfig {
-  static const String SIGNALING_URL = 'http://[IP]:5601';
-  static const String DISCOVERY_URL = 'http://[IP]:5602';
+  // Supabase rendezvous (no custom server needed)
+  static const String SIGNALING_URL = 'supabase://bztwadpqoohabbemqutp';
+  static const String DISCOVERY_URL = 'supabase://bztwadpqoohabbemqutp';
   static const String STUN_SERVER = 'stun.l.google.com:19302';
   static const int SERVER_LISTEN_PORT = 10853;
   static const String SERVER_NAT_METHOD = 'auto';
   static const String SERVER_PROTOCOL = 'vless';
   static const String SERVER_TRANSPORT = 'xhttp';
   static const bool SERVER_DISCOVERY_ENABLED = true;
-  static const bool SERVER_USE_RELAY = false;
+  // Enable relay fallback by default.
+  static const bool SERVER_USE_RELAY = true;
   static const int CLIENT_SOCKS_PORT = 10808;
   static const String CLIENT_TUN_ADDRESS = '10.0.0.2';
   static const int CLIENT_MTU = 1500;

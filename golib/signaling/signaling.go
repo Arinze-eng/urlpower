@@ -51,6 +51,10 @@ func PostOffer(signalingURL, sessionID string, ip string, port int) error {
 	info := peerInfo{IP: ip, Port: port}
 	body, _ := json.Marshal(info)
 
+	if isSupabaseURL(signalingURL) {
+		return supaUpsertSession(signalingURL, sessionID, "offer", body)
+	}
+
 	url := fmt.Sprintf("%s/session/%s/offer", signalingURL, sessionID)
 	resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
@@ -67,6 +71,20 @@ func PostOffer(signalingURL, sessionID string, ip string, port int) error {
 // GetOffer retrieves the server's public endpoint from the signaling server.
 // Retries up to maxRetries times with retryInterval between attempts.
 func GetOffer(signalingURL, sessionID string) (string, int, error) {
+	if isSupabaseURL(signalingURL) {
+		b, err := supaWaitSessionField(signalingURL, sessionID, "offer", time.Duration(peerInfoRetries)*peerRetryInterval)
+		if err != nil {
+			return "", 0, fmt.Errorf("get offer: %w", err)
+		}
+		if b == nil {
+			return "", 0, fmt.Errorf("get offer: not found")
+		}
+		var info peerInfo
+		if err := json.Unmarshal(b, &info); err != nil {
+			return "", 0, fmt.Errorf("get offer: parse: %w", err)
+		}
+		return info.IP, info.Port, nil
+	}
 	return getPeerInfo(fmt.Sprintf("%s/session/%s/offer", signalingURL, sessionID))
 }
 
@@ -74,6 +92,10 @@ func GetOffer(signalingURL, sessionID string) (string, int, error) {
 func PostAnswer(signalingURL, sessionID string, ip string, port int) error {
 	info := peerInfo{IP: ip, Port: port}
 	body, _ := json.Marshal(info)
+
+	if isSupabaseURL(signalingURL) {
+		return supaUpsertSession(signalingURL, sessionID, "answer", body)
+	}
 
 	url := fmt.Sprintf("%s/session/%s/answer", signalingURL, sessionID)
 	resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
@@ -90,6 +112,20 @@ func PostAnswer(signalingURL, sessionID string, ip string, port int) error {
 
 // GetAnswer retrieves the client's public endpoint from the signaling server.
 func GetAnswer(signalingURL, sessionID string) (string, int, error) {
+	if isSupabaseURL(signalingURL) {
+		b, err := supaWaitSessionField(signalingURL, sessionID, "answer", time.Duration(peerInfoRetries)*peerRetryInterval)
+		if err != nil {
+			return "", 0, fmt.Errorf("get answer: %w", err)
+		}
+		if b == nil {
+			return "", 0, fmt.Errorf("get answer: not found")
+		}
+		var info peerInfo
+		if err := json.Unmarshal(b, &info); err != nil {
+			return "", 0, fmt.Errorf("get answer: parse: %w", err)
+		}
+		return info.IP, info.Port, nil
+	}
 	return getPeerInfo(fmt.Sprintf("%s/session/%s/answer", signalingURL, sessionID))
 }
 
@@ -117,6 +153,9 @@ func PostSDPOffer(signalingURL, sessionID, sdp string, client *http.Client, obfs
 	}
 
 	body, _ := json.Marshal(sdpPayload{SDP: payload})
+	if isSupabaseURL(signalingURL) {
+		return supaUpsertSession(signalingURL, sessionID, "offer", body)
+	}
 	url := fmt.Sprintf("%s/session/%s/offer", signalingURL, sessionID)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
@@ -162,6 +201,9 @@ func PostSDPAnswer(signalingURL, sessionID, sdp string, client *http.Client, obf
 	}
 
 	body, _ := json.Marshal(sdpPayload{SDP: payload})
+	if isSupabaseURL(signalingURL) {
+		return supaUpsertSession(signalingURL, sessionID, "answer", body)
+	}
 	url := fmt.Sprintf("%s/session/%s/answer", signalingURL, sessionID)
 	resp, err := client.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
@@ -212,6 +254,34 @@ func getSDPInfo(url string, client *http.Client) (string, error) {
 	if client == nil {
 		client = httpClient
 	}
+
+	// Supabase rendezvous: poll table field instead of HTTP endpoint.
+	if isSupabaseURL(url) {
+		// URL here will be like supabase://ref/session/{id}/offer. Extract session id + field.
+		parts := strings.Split(strings.TrimPrefix(url, "supabase://"), "/")
+		// parts[0]=ref, expect .../session/{id}/{field}
+		if len(parts) >= 4 {
+			ref := parts[0]
+			sessionID := parts[len(parts)-2]
+			field := parts[len(parts)-1]
+			b, err := supaWaitSessionField("supabase://"+ref, sessionID, field, time.Duration(peerInfoRetries)*peerRetryInterval)
+			if err != nil {
+				return "", err
+			}
+			if b == nil {
+				return "", fmt.Errorf("not available")
+			}
+			var payload sdpPayload
+			if err := json.Unmarshal(b, &payload); err != nil {
+				return "", fmt.Errorf("parse SDP payload: %w", err)
+			}
+			if payload.SDP == "" {
+				return "", fmt.Errorf("SDP empty")
+			}
+			return payload.SDP, nil
+		}
+	}
+
 	backoff := util.NewBackoff(1*time.Second, 10*time.Second, 0.5)
 	deadline := time.Now().Add(time.Duration(peerInfoRetries) * peerRetryInterval)
 	for time.Now().Before(deadline) {
@@ -671,6 +741,10 @@ func RegisterServer(signalingURL, name, room, connectionCode, method, transport,
 	}
 	payload, _ := json.Marshal(data)
 
+	if isSupabaseURL(signalingURL) {
+		return supaRegisterListing(signalingURL, name, room, connectionCode, method, transport, protocol, natInfo...)
+	}
+
 	url := fmt.Sprintf("%s/discovery/register", signalingURL)
 	resp, err := httpClient.Post(url, "application/json", bytes.NewReader(payload))
 	if err != nil {
@@ -694,6 +768,9 @@ func RegisterServer(signalingURL, name, room, connectionCode, method, transport,
 
 // DeregisterServer removes a server listing from the signaling server.
 func DeregisterServer(signalingURL, listingID string) error {
+	if isSupabaseURL(signalingURL) {
+		return supaDeleteListing(signalingURL, listingID)
+	}
 	url := fmt.Sprintf("%s/discovery/%s", signalingURL, listingID)
 	req, _ := http.NewRequest(http.MethodDelete, url, nil)
 	resp, err := httpClient.Do(req)
@@ -711,6 +788,9 @@ func DeregisterServer(signalingURL, listingID string) error {
 // HeartbeatServer pings the signaling server to keep the listing alive.
 // ErrListingExpired is returned when the server has already dropped it (404).
 func HeartbeatServer(signalingURL, listingID string) error {
+	if isSupabaseURL(signalingURL) {
+		return supaHeartbeatListing(signalingURL, listingID)
+	}
 	url := fmt.Sprintf("%s/discovery/%s/heartbeat", signalingURL, listingID)
 	resp, err := httpClient.Post(url, "application/json", nil)
 	if err != nil {
@@ -731,6 +811,10 @@ func HeartbeatServer(signalingURL, listingID string) error {
 // Pass natInfo (mapping, filtering) so the server can sort by NAT compatibility.
 // Returns raw JSON as a string — gomobile can't handle slices of structs.
 func ListServers(signalingURL, room string, natInfo ...string) (string, error) {
+	if isSupabaseURL(signalingURL) {
+		// NAT scoring is handled on the client side in this mode.
+		return supaListListings(signalingURL, room)
+	}
 	url := fmt.Sprintf("%s/discovery/servers", signalingURL)
 	sep := "?"
 	if room != "" {

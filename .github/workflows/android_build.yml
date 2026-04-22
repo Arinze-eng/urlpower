@@ -44,19 +44,15 @@ jobs:
         echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
         gomobile init
 
-    - name: Build Go Library
+    - name: Build Go Library and Flutter APK
       run: |
-        cd golib
-        mkdir -p ../android/app/libs
-        gomobile bind -v -ldflags="-checklinkname=0" -target="android/arm64" -androidapi=24 -o ../android/app/libs/golib.aar ./
-
-    - name: Build Flutter APK (arm64-v8a)
-      run: |
+        chmod +x ./build-android.sh
+        ./build-android.sh arm
         flutter pub get
-        flutter build apk --release --target-platform android-arm64 --android-skip-build-dependency-validation
+        flutter build apk --release --android-skip-build-dependency-validation
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-arm64-v8a-release-apk
+        name: app-release-apk
         path: build/app/outputs/flutter-apk/app-release.apk

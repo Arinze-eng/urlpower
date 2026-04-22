@@ -144,6 +144,7 @@ class MainActivity : FlutterActivity() {
                     listServers(discoveryUrl, room, result)
                 }
                 "requestBatteryOptimization" -> requestBatteryOptimization(result)
+                "getDeviceName" -> result.success(getDeviceName())
                 "startServerManual" -> {
                     val settings = call.argument<String>("settings") ?: "{}"
                     startServerManual(settings, result)
@@ -214,6 +215,13 @@ class MainActivity : FlutterActivity() {
             data = Uri.parse("package:$packageName")
         }
         startActivityForResult(intent, BATTERY_OPT_REQUEST_CODE)
+    }
+
+    private fun getDeviceName(): String {
+        val manu = Build.MANUFACTURER ?: ""
+        val model = Build.MODEL ?: ""
+        val name = ("$manu $model").trim().replace(Regex("\\s+"), " ")
+        return if (name.isNotEmpty()) name else "Android"
     }
 
     private fun ensureNotificationPermission() {

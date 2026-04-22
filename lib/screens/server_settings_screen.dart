@@ -365,6 +365,8 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
           ),
         ],
       ),
+        ),
+      ),
     );
     if (confirmed == true) {
       _applySettings(const ServerSettings());
@@ -519,20 +521,20 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
           appBar: AppBar(
             title: const Text('Server Settings'),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.restore),
-                tooltip: 'Reset to Defaults',
-                onPressed: _isLoading ? null : _resetToDefaults,
-              ),
-              IconButton(
-                icon: const Icon(Icons.check),
-                onPressed: _isLoading ? null : _saveSettings,
-              ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.restore),
+            tooltip: 'Reset to Defaults',
+            onPressed: _isLoading ? null : _resetToDefaults,
           ),
-          body: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
+          IconButton(
+            icon: const Icon(Icons.check),
+            onPressed: _isLoading ? null : _saveSettings,
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
@@ -1529,8 +1531,6 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
                 ),
               ),
             ),
-        ),
-      ),
     );
   }
 }

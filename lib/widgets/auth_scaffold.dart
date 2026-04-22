@@ -20,28 +20,31 @@ class AuthScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AnimatedHeroHeader(
-                      title: 'CDN-NETSHARE',
-                      subtitle: subtitle,
-                      icon: icon,
-                    ),
-                    const SizedBox(height: 12),
-                    GlassCard(
-                      padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
-                      child: child,
-                    ),
-                  ],
+                padding: const EdgeInsets.all(20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AnimatedHeroHeader(
+                        title: 'CDN-NETSHARE',
+                        subtitle: subtitle,
+                        icon: icon,
+                      ),
+                      const SizedBox(height: 12),
+                      GlassCard(
+                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+                        child: child,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

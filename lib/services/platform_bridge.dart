@@ -14,6 +14,12 @@ class PlatformBridge {
         false;
   }
 
+  /// Best-effort device name for auto-fill (Android: manufacturer + model).
+  static Future<String> getDeviceName() async {
+    final result = await _channel.invokeMethod<String>('getDeviceName');
+    return (result ?? '').trim();
+  }
+
   static Future<String> startServer(String settingsJson) async {
     final result = await _channel.invokeMethod<String>('startServer', {
       'settings': settingsJson,

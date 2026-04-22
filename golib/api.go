@@ -589,7 +589,7 @@ func StartServer(settingsJSON string) (string, error) {
 	}
 	applog.Info("Generated UDP obfuscation key for WebRTC path (AES-256-GCM)")
 
-	sessionID := cfg.UUID
+	sessionID := offer.SessionID
 	if sessionID == "" {
 		sessionID = generateUUID()
 	}

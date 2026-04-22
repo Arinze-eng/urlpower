@@ -86,6 +86,9 @@ class _ServerScreenState extends State<ServerScreen>
   int _logCursor = 0;
   StreamSubscription<Map<String, dynamic>>? _statusSub;
 
+  bool _manualStopRequested = false;
+  Timer? _autoRestartTimer;
+
   // Manual signaling state
   int _manualStep = 0; // 0=off, 1=show offer, 2=enter answer, 3=connecting
   String _offerCode = '';
@@ -106,6 +109,7 @@ class _ServerScreenState extends State<ServerScreen>
 
   @override
   void dispose() {
+    _autoRestartTimer?.cancel();
     _statusSub?.cancel();
     _deepLinkSub?.cancel();
     _answerController.dispose();
@@ -140,6 +144,7 @@ class _ServerScreenState extends State<ServerScreen>
 
   void _onPlatformEvent(Map<String, dynamic> event) {
     if (event['event'] == 'stopped' && event['source'] == 'server' && mounted) {
+      final shouldRestart = !_manualStopRequested;
       setState(() {
         _isRunning = false;
         _connectionCode = '';
@@ -165,6 +170,20 @@ class _ServerScreenState extends State<ServerScreen>
         _manualStep = 0;
         _offerCode = '';
       });
+
+      if (shouldRestart) {
+        // Watchdog: if Android kills the service, bring it back.
+        _autoRestartTimer?.cancel();
+        _autoRestartTimer = Timer(const Duration(seconds: 2), () {
+          if (!mounted) return;
+          if (_isStarting || _isRunning) return;
+          _manualStopRequested = false;
+          _startServer();
+        });
+      }
+
+      // Reset manual stop flag after handling stop.
+      _manualStopRequested = false;
     }
   }
 
@@ -405,6 +424,8 @@ class _ServerScreenState extends State<ServerScreen>
   }
 
   Future<void> _stopServer() async {
+    _manualStopRequested = true;
+    _autoRestartTimer?.cancel();
     try {
       if (_listingId.isNotEmpty) {
         try {

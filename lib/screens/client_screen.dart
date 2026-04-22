@@ -14,6 +14,7 @@ import '../widgets/connection_code.dart';
 import '../widgets/log_panel.dart';
 import '../widgets/server_list.dart';
 import '../widgets/app_background.dart';
+import '../utils/host_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 const _kLogPollInterval = Duration(milliseconds: 500);
@@ -59,6 +60,9 @@ class _ClientScreenState extends State<ClientScreen>
   DiscoveryStreamState _discoveryState = DiscoveryStreamState.disconnected;
   StreamSubscription<Map<String, dynamic>>? _statusSub;
 
+  bool _manualDisconnectRequested = false;
+  Timer? _autoReconnectTimer;
+
   // Manual signaling state
   bool _isManualMode = false;
   String _answerCode = '';
@@ -84,6 +88,17 @@ class _ClientScreenState extends State<ClientScreen>
         }
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _autoReconnectTimer?.cancel();
+    _statusSub?.cancel();
+    _deepLinkSub?.cancel();
+    _disconnectDiscoveryStream();
+    _codeController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -130,6 +145,7 @@ class _ClientScreenState extends State<ClientScreen>
 
   void _onPlatformEvent(Map<String, dynamic> event) {
     if (event['event'] == 'stopped' && event['source'] == 'client' && mounted) {
+      final shouldReconnect = !_manualDisconnectRequested;
       setState(() {
         _isConnected = false;
         _bytesUp = 0;
@@ -147,6 +163,21 @@ class _ClientScreenState extends State<ClientScreen>
       if (_settings.discoveryEnabled) {
         _connectDiscoveryStream();
       }
+
+      if (shouldReconnect) {
+        final last = _codeController.text.trim();
+        if (last.isNotEmpty) {
+          _autoReconnectTimer?.cancel();
+          _autoReconnectTimer = Timer(const Duration(seconds: 2), () {
+            if (!mounted) return;
+            if (_isConnecting || _isConnected) return;
+            _manualDisconnectRequested = false;
+            _connect();
+          });
+        }
+      }
+
+      _manualDisconnectRequested = false;
     }
   }
 
@@ -201,6 +232,47 @@ class _ClientScreenState extends State<ClientScreen>
     _discoveryState = DiscoveryStreamState.disconnected;
   }
 
+  Future<String?> _resolveByNameAndPassword(String name, String password) async {
+    final targetName = name.trim();
+    final pass = password.trim();
+    if (targetName.isEmpty || pass.isEmpty) return null;
+
+    // Prefer the live discovery stream list if available.
+    List<ServerListing> servers = _availableServers;
+
+    // If discovery stream isn't running / has no data yet, fetch once.
+    if (servers.isEmpty) {
+      try {
+        final raw = await PlatformBridge.listServers(_settings.discoveryUrl, _settings.roomFilter);
+        final decoded = (jsonDecode(raw) as List<dynamic>)
+            .map((e) => ServerListing.fromJson(e as Map<String, dynamic>))
+            .toList();
+        servers = decoded;
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    if (servers.isEmpty) return null;
+
+    // Match by name (case-insensitive exact match).
+    ServerListing? hit;
+    for (final s in servers) {
+      if (s.name.trim().toLowerCase() == targetName.toLowerCase()) {
+        hit = s;
+        break;
+      }
+    }
+    if (hit == null) return null;
+
+    // Validate password by checking the UUID embedded in the code.
+    if (!HostAuth.passwordMatchesCode(password: pass, code: hit.code)) {
+      return null;
+    }
+
+    return hit.code;
+  }
+
   Future<void> _syncState() async {
     try {
       final statusJson = await PlatformBridge.getClientStatus();
@@ -235,12 +307,12 @@ class _ClientScreenState extends State<ClientScreen>
     if (_isConnected) {
       await _disconnect();
     } else {
-      await _connect(_codeController.text);
+      await _connect();
     }
   }
 
-  Future<void> _connect(String code) async {
-    code = code.trim();
+  Future<void> _connect() async {
+    var code = _codeController.text.trim();
     if (code.isEmpty) {
       debugPrint('ClientScreen: empty connection code');
       setState(() {
@@ -252,6 +324,30 @@ class _ClientScreenState extends State<ClientScreen>
     // Auto-detect manual offer codes
     if (code.startsWith('M1:')) {
       return _connectManual(code);
+    }
+
+    // "Device Name + Password" mode (no UI changes):
+    // If input looks like "name|password" / "name password" etc, resolve via discovery.
+    final np = HostAuth.parseNamePassword(code);
+    final looksLikeNamePass =
+        np.name.isNotEmpty && np.password.isNotEmpty && (code.length < 120 || code.contains(' ') || code.contains('|') || code.contains(':') || code.contains('#') || code.contains('@'));
+    if (looksLikeNamePass) {
+      setState(() {
+        _isConnecting = true;
+        _error = null;
+      });
+      final resolved = await _resolveByNameAndPassword(np.name, np.password);
+      if (resolved == null || resolved.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isConnecting = false;
+            _error = 'Could not connect: wrong name/password or server is offline';
+          });
+        }
+        return;
+      }
+      code = resolved;
+      _codeController.text = code;
     }
 
     setState(() {
@@ -441,6 +537,8 @@ class _ClientScreenState extends State<ClientScreen>
   }
 
   Future<void> _disconnect() async {
+    _manualDisconnectRequested = true;
+    _autoReconnectTimer?.cancel();
     try {
       await PlatformBridge.stop();
       setState(() {
@@ -593,15 +691,6 @@ class _ClientScreenState extends State<ClientScreen>
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
-  @override
-  void dispose() {
-    _disconnectDiscoveryStream();
-    _statusSub?.cancel();
-    _deepLinkSub?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
-    _codeController.dispose();
-    super.dispose();
-  }
 
   Widget _buildManualClientUI() {
     if (_manualClientStep == 1) {
@@ -870,7 +959,7 @@ class _ClientScreenState extends State<ClientScreen>
                         onRefresh: _connectDiscoveryStream,
                         onServerTap: (server) {
                           _codeController.text = server.code;
-                          _connect(_codeController.text);
+                          _connect();
                         },
                       ),
                       const SizedBox(height: 16),

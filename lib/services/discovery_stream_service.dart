@@ -4,6 +4,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/supabase_config.dart';
 import '../models/server_listing.dart';
 import '../utils/url_utils.dart';
 
@@ -23,6 +25,7 @@ class DiscoveryStreamService {
   DiscoveryStreamState _currentState = DiscoveryStreamState.disconnected;
   HttpClient? _httpClient;
   StreamSubscription<List<int>>? _streamSub;
+  RealtimeChannel? _rtChannel;
   Timer? _reconnectTimer;
   Duration _backoff = _initialBackoff;
   bool _permanentlyClosed = false;
@@ -43,6 +46,12 @@ class DiscoveryStreamService {
     _reconnectTimer = null;
 
     _setState(DiscoveryStreamState.connecting);
+
+    // Supabase rendezvous mode.
+    if (_signalingUrl.startsWith('supabase://')) {
+      _connectSupabaseRealtime();
+      return;
+    }
 
     _httpClient?.close(force: true);
     _httpClient = HttpClient();
@@ -97,6 +106,66 @@ class DiscoveryStreamService {
           _setState(DiscoveryStreamState.error);
           _scheduleReconnect();
         });
+  }
+
+  Future<void> _connectSupabaseRealtime() async {
+    // Ensure previous channel is cleaned up.
+    await _rtChannel?.unsubscribe();
+    _rtChannel = null;
+
+    try {
+      // Initial load.
+      final query = SupabaseConfig.client
+          .from('rendezvous_listings')
+          .select('id,name,room,code,method,transport,protocol');
+      final dynamic res = _room.isNotEmpty
+          ? await query.eq('room', _room)
+          : await query;
+
+      final list = (res as List<dynamic>)
+          .map((e) => ServerListing.fromJson(e as Map<String, dynamic>))
+          .toList();
+      _serversController.add(list);
+
+      _setState(DiscoveryStreamState.connected);
+      _backoff = _initialBackoff;
+
+      // Subscribe to changes.
+      final channelName = 'rendezvous_listings_${_room.isEmpty ? 'all' : _room}';
+      final ch = SupabaseConfig.client.channel(channelName);
+      _rtChannel = ch;
+
+      ch.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'rendezvous_listings',
+        callback: (payload) async {
+          if (_permanentlyClosed) return;
+          try {
+            final dynamic rr = _room.isNotEmpty
+                ? await SupabaseConfig.client
+                    .from('rendezvous_listings')
+                    .select('id,name,room,code,method,transport,protocol')
+                    .eq('room', _room)
+                : await SupabaseConfig.client
+                    .from('rendezvous_listings')
+                    .select('id,name,room,code,method,transport,protocol');
+            final list2 = (rr as List<dynamic>)
+                .map((e) => ServerListing.fromJson(e as Map<String, dynamic>))
+                .toList();
+            _serversController.add(list2);
+          } catch (e) {
+            debugPrint('DiscoveryStream(Supabase): refresh error: $e');
+          }
+        },
+      );
+
+      await ch.subscribe();
+    } catch (e) {
+      debugPrint('DiscoveryStream(Supabase): connect error: $e');
+      _setState(DiscoveryStreamState.error);
+      _scheduleReconnect();
+    }
   }
 
   Uri _buildUri() {
@@ -179,6 +248,8 @@ class DiscoveryStreamService {
     _streamSub = null;
     _httpClient?.close(force: true);
     _httpClient = null;
+    _rtChannel?.unsubscribe();
+    _rtChannel = null;
     _setState(DiscoveryStreamState.disconnected);
   }
 

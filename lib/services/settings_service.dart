@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/settings_model.dart';
+import '../services/platform_bridge.dart';
+import '../utils/host_auth.dart';
 import '../utils/url_utils.dart';
 
 class SettingsService {
@@ -18,7 +20,9 @@ class SettingsService {
 
   Future<ServerSettings> loadServerSettings() async {
     final prefs = await _preferences;
-    return ServerSettings(
+
+    // Load persisted values.
+    var settings = ServerSettings(
       listenPort:
           prefs.getInt('server_listenPort') ?? ServerSettings.defaultListenPort,
       stunServer:
@@ -185,6 +189,34 @@ class SettingsService {
           prefs.getString('server_uuid') ??
           ServerSettings.defaultUuid,
     );
+
+    // Auto-fill display name and password (no UI changes required).
+    // This makes the host ready to start with one tap.
+    if (settings.displayName.trim().isEmpty) {
+      final deviceName = await PlatformBridge.getDeviceName();
+      final fallback = deviceName.isNotEmpty ? deviceName : 'Android Host';
+      await prefs.setString('server_displayName', fallback);
+      settings = settings.copyWith(displayName: fallback);
+    }
+
+    // Use socksPassword as the "host password" shown in UI.
+    // If empty, generate one and persist.
+    var pass = settings.socksPassword.trim();
+    if (pass.isEmpty) {
+      pass = HostAuth.generatePassword(length: 8);
+      await prefs.setString('server_socksPassword', pass);
+      settings = settings.copyWith(socksPassword: pass);
+    }
+
+    // Tie authentication to password by making UUID deterministic.
+    // This ensures changing password invalidates old clients.
+    final derivedUuid = HostAuth.deriveUuidFromPassword(pass);
+    if (derivedUuid.isNotEmpty && settings.uuid != derivedUuid) {
+      await prefs.setString('server_uuid', derivedUuid);
+      settings = settings.copyWith(uuid: derivedUuid);
+    }
+
+    return settings;
   }
 
   Future<void> saveServerSettings(ServerSettings settings) async {
@@ -256,7 +288,11 @@ class SettingsService {
     await prefs.setBool('server_sctpZeroChecksum', settings.sctpZeroChecksum);
     await prefs.setBool('server_disableCloseByDTLS', settings.disableCloseByDTLS);
     await prefs.setBool('server_maskIPs', settings.maskIPs);
-    await prefs.setString('server_uuid', settings.uuid);
+
+    // Keep UUID in sync with the host password.
+    final pass = settings.socksPassword.trim();
+    final derivedUuid = HostAuth.deriveUuidFromPassword(pass);
+    await prefs.setString('server_uuid', derivedUuid.isNotEmpty ? derivedUuid : settings.uuid);
   }
 
   // Client settings
