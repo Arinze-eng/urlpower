@@ -1,6 +1,6 @@
 module natproxy/golib
 
-go 1.22.7
+go 1.25.6
 
 // After cloning, run:
 //   go mod tidy
