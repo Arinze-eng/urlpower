@@ -234,7 +234,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           backgroundColor: Colors.transparent,
           appBar: AppBar(title: const Text('Plans')),
           body: SafeArea(
-        child: ListView(
+            child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             if (_verifying)

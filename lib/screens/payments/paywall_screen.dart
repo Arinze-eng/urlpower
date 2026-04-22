@@ -26,7 +26,7 @@ class PaywallScreen extends StatelessWidget {
       body: AppBackground(
         child: SafeArea(
           child: Center(
-          child: SingleChildScrollView(
+            child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
