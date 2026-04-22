@@ -78,7 +78,7 @@ class ConnectionCodeDisplay extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             if (showQr) ...[
-              _DeepLinkBlock(code: code),
+              DeepLinkBlock(code: code),
               const SizedBox(height: 12),
               Center(
                 child: Container(
@@ -88,7 +88,7 @@ class ConnectionCodeDisplay extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: QrImageView(
-                    data: _DeepLinkBlock.buildConnectLink(code),
+                    data: DeepLinkBlock.buildConnectLink(code),
                     size: 180,
                     backgroundColor: Colors.white,
                     errorCorrectionLevel: QrErrorCorrectLevel.M,
