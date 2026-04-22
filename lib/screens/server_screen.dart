@@ -10,6 +10,7 @@ import '../widgets/status_card.dart';
 import '../widgets/connection_code.dart';
 import '../widgets/vless_link.dart';
 import '../widgets/log_panel.dart';
+import '../widgets/app_background.dart';
 
 const _kLogPollInterval = Duration(milliseconds: 500);
 const _kStatusPollInterval = Duration(seconds: 2);
@@ -676,7 +677,10 @@ class _ServerScreenState extends State<ServerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      body: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
         title: const Text('Share Internet'),
         actions: [
           IconButton(
@@ -843,6 +847,8 @@ class _ServerScreenState extends State<ServerScreen>
           ),
           LogPanel(entries: _logEntries, onClear: _clearLogs),
         ],
+      ),
+        ),
       ),
     );
   }

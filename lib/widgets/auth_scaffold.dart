@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:natproxy/widgets/animated_hero_header.dart';
+import 'package:natproxy/widgets/app_background.dart';
+import 'package:natproxy/widgets/glass_card.dart';
 
 /// Shared auth UI wrapper for sign-in / sign-up screens.
 class AuthScaffold extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget child;
+  final IconData icon;
 
   const AuthScaffold({
     super.key,
     required this.title,
     required this.subtitle,
     required this.child,
+    this.icon = Icons.shield_outlined,
   });
 
   @override
@@ -18,94 +23,32 @@ class AuthScaffold extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Soft background gradient
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      cs.primary.withOpacity(0.10),
-                      cs.secondary.withOpacity(0.08),
-                      cs.tertiary.withOpacity(0.06),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-              ),
-            ),
-            Center(
-              child: SingleChildScrollView(
+      body: AppBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 440),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: cs.surface,
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: cs.outlineVariant.withOpacity(0.6)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                height: 44,
-                                width: 44,
-                                decoration: BoxDecoration(
-                                  color: cs.primary.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Icon(Icons.shield_outlined, color: cs.primary),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(fontWeight: FontWeight.w800),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      subtitle,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(color: cs.onSurfaceVariant),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 22),
-                          child,
-                        ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AnimatedHeroHeader(
+                        title: 'CDN-NETSHARE',
+                        subtitle: subtitle,
+                        icon: icon,
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      GlassCard(
+                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+                        child: child,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

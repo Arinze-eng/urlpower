@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/screens/payments/payment_screen.dart';
-import 'package:natproxy/widgets/gradient_header.dart';
+import 'package:natproxy/widgets/app_background.dart';
+import 'package:natproxy/widgets/glass_card.dart';
+import 'package:natproxy/widgets/gradient_button.dart';
 
 class PaywallScreen extends StatelessWidget {
   final String title;
@@ -21,8 +23,9 @@ class PaywallScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
+      body: AppBackground(
+        child: SafeArea(
+          child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: ConstrainedBox(
@@ -30,7 +33,8 @@ class PaywallScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  GradientHeader(
+                  const SizedBox(height: 0),
+                  GlassCard(
                     child: Row(
                       children: [
                         Container(
@@ -57,21 +61,27 @@ class PaywallScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Card(
+                  GlassCard(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (showPlans) ...[
-                            FilledButton.icon(
+                            GradientButton(
                               onPressed: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(builder: (_) => const PaymentScreen()),
                                 );
                               },
-                              icon: const Icon(Icons.workspace_premium_outlined),
-                              label: const Text('Choose a plan'),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.workspace_premium_outlined),
+                                  SizedBox(width: 10),
+                                  Text('Choose a plan'),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 10),
                           ],

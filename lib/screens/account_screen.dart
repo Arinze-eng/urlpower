@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/screens/payments/payment_screen.dart';
-import 'package:natproxy/widgets/gradient_header.dart';
+import 'package:natproxy/widgets/app_background.dart';
+import 'package:natproxy/widgets/glass_card.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -13,12 +14,15 @@ class AccountScreen extends StatelessWidget {
     final t = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
-      body: SafeArea(
+      body: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(title: const Text('Account')),
+          body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            GradientHeader(
+            GlassCard(
               child: Row(
                 children: [
                   Container(
@@ -51,7 +55,7 @@ class AccountScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            Card(
+            GlassCard(
               child: Column(
                 children: [
                   ListTile(
@@ -85,7 +89,7 @@ class AccountScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            Card(
+            GlassCard(
               child: ListTile(
                 leading: Icon(Icons.shield_outlined, color: cs.tertiary),
                 title: const Text('Security note'),
@@ -93,6 +97,8 @@ class AccountScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

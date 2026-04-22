@@ -3,6 +3,7 @@ import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/services/auth_helpers.dart';
 import 'package:natproxy/widgets/auth_scaffold.dart';
 import 'package:natproxy/widgets/password_field.dart';
+import 'package:natproxy/widgets/gradient_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -100,6 +101,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return AuthScaffold(
       title: 'Welcome back',
       subtitle: 'Sign in to continue to CDN-NETSHARE.',
+      icon: Icons.login_outlined,
       child: Form(
         key: _formKey,
         child: Column(
@@ -131,21 +133,34 @@ class _SignInScreenState extends State<SignInScreen> {
               },
             ),
             const SizedBox(height: 18),
-            FilledButton.icon(
+            GradientButton(
               onPressed: _loading ? null : _signIn,
-              icon: _loading
+              child: _loading
                   ? const SizedBox(
                       height: 18,
                       width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Icon(Icons.login_outlined),
-              label: Text(_loading ? 'Signing in…' : 'Sign in'),
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.login_outlined),
+                        SizedBox(width: 10),
+                        Text('Sign in'),
+                      ],
+                    ),
             ),
             const SizedBox(height: 10),
             TextButton(
               onPressed: _loading ? null : () => Navigator.of(context).pushNamed('/sign-up'),
               child: const Text("Don't have an account? Sign up"),
+            ),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: _loading
+                  ? null
+                  : () => Navigator.of(context).pushNamed('/resend-verification'),
+              child: const Text('Resend verification email'),
             ),
           ],
         ),

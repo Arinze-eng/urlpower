@@ -12,6 +12,7 @@ import '../widgets/status_card.dart';
 import '../widgets/connection_code.dart';
 import '../widgets/log_panel.dart';
 import '../widgets/server_list.dart';
+import '../widgets/app_background.dart';
 
 const _kLogPollInterval = Duration(milliseconds: 500);
 const _kStatusPollInterval = Duration(seconds: 1);
@@ -655,7 +656,10 @@ class _ClientScreenState extends State<ClientScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      body: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
         title: const Text('Connect'),
         actions: [
           IconButton(
@@ -822,6 +826,8 @@ class _ClientScreenState extends State<ClientScreen>
           ),
           LogPanel(entries: _logEntries, onClear: _clearLogs),
         ],
+      ),
+        ),
       ),
     );
   }

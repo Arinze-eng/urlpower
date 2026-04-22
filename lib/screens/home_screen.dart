@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:natproxy/widgets/gradient_header.dart';
+import 'package:natproxy/widgets/animated_hero_header.dart';
+import 'package:natproxy/widgets/app_background.dart';
+import 'package:natproxy/widgets/glass_card.dart';
+import 'package:natproxy/widgets/gradient_button.dart';
+import 'package:natproxy/widgets/info_banner.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,7 +14,10 @@ class HomeScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
+      body: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
         title: const Text('CDN-NETSHARE'),
         actions: [
           IconButton(
@@ -20,44 +27,17 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
+          body: SafeArea(
+            child: ListView(
           padding: const EdgeInsets.all(16),
-          children: [
-            GradientHeader(
-              child: Row(
-                children: [
-                  Container(
-                    height: 54,
-                    width: 54,
-                    decoration: BoxDecoration(
-                      color: cs.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Icon(Icons.wifi_tethering_rounded, color: cs.primary),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'P2P Internet Sharing',
-                          style: t.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Share your connection securely with nearby devices.',
-                          style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              children: [
+            const AnimatedHeroHeader(
+              title: 'CDN-NETSHARE',
+              subtitle: 'P2P sharing made simple, secure, and fast.',
+              icon: Icons.wifi_tethering_rounded,
             ),
             const SizedBox(height: 16),
-            Card(
+            GlassCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -65,10 +45,16 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     Text('Choose a mode', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 10),
-                    FilledButton.icon(
+                    GradientButton(
                       onPressed: () => Navigator.pushNamed(context, '/server'),
-                      icon: const Icon(Icons.upload_rounded),
-                      label: const Text('Share Internet (Server)'),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.upload_rounded),
+                          SizedBox(width: 10),
+                          Text('Share Internet (Server)'),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
@@ -81,22 +67,17 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Card(
-              child: ListTile(
-                leading: Container(
-                  height: 42,
-                  width: 42,
-                  decoration: BoxDecoration(
-                    color: cs.tertiary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(Icons.tips_and_updates_outlined, color: cs.tertiary),
-                ),
-                title: const Text('Tip'),
-                subtitle: const Text('For best results, keep both devices on the same network and disable aggressive battery saving.'),
-              ),
+            InfoBanner(
+              icon: Icons.auto_awesome_outlined,
+              title: 'Quick start',
+              message:
+                  '1) Choose Server on the device sharing internet\n'
+                  '2) Start Sharing and copy the Connection Code\n'
+                  '3) On the other device choose Client and paste the code',
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

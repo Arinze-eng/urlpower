@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/widgets/auth_scaffold.dart';
 import 'package:natproxy/widgets/password_field.dart';
+import 'package:natproxy/widgets/gradient_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -134,6 +135,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return AuthScaffold(
       title: 'Create account',
       subtitle: 'Start your 5-day trial and secure your access.',
+      icon: Icons.person_add_alt_1_outlined,
       child: Form(
         key: _formKey,
         child: Column(
@@ -170,16 +172,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
               },
             ),
             const SizedBox(height: 18),
-            FilledButton.icon(
+            GradientButton(
               onPressed: _loading ? null : _signUp,
-              icon: _loading
+              child: _loading
                   ? const SizedBox(
                       height: 18,
                       width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Icon(Icons.person_add_alt_1_outlined),
-              label: Text(_loading ? 'Creating…' : 'Create account'),
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.person_add_alt_1_outlined),
+                        SizedBox(width: 10),
+                        Text('Create account'),
+                      ],
+                    ),
             ),
             const SizedBox(height: 10),
             TextButton(

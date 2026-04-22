@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/settings_model.dart';
 import '../services/settings_service.dart';
+import '../widgets/app_background.dart';
 import '../services/name_generator.dart';
 
 class ServerSettingsScreen extends StatefulWidget {
@@ -363,6 +364,8 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
           ),
         ],
       ),
+        ),
+      ),
     );
     if (confirmed == true) {
       _applySettings(const ServerSettings());
@@ -511,9 +514,12 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Server Settings'),
-        actions: [
+      body: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('Server Settings'),
+            actions: [
           IconButton(
             icon: const Icon(Icons.restore),
             tooltip: 'Reset to Defaults',

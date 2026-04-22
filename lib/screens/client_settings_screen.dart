@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/settings_model.dart';
 import '../services/settings_service.dart';
+import '../widgets/app_background.dart';
 
 class ClientSettingsScreen extends StatefulWidget {
   const ClientSettingsScreen({super.key});
@@ -107,6 +108,8 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
             child: const Text('Reset'),
           ),
         ],
+      ),
+        ),
       ),
     );
     if (confirmed == true) {
@@ -262,9 +265,12 @@ class _ClientSettingsScreenState extends State<ClientSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Client Settings'),
-        actions: [
+      body: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: const Text('Client Settings'),
+            actions: [
           IconButton(
             icon: const Icon(Icons.restore),
             tooltip: 'Reset to Defaults',

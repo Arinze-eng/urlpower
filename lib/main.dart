@@ -3,6 +3,7 @@ import 'package:natproxy/auth/auth_gate.dart';
 import 'package:natproxy/config/app_theme.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/screens/account_screen.dart';
+import 'package:natproxy/screens/auth/resend_verification_screen.dart';
 import 'package:natproxy/screens/auth/sign_up_screen.dart';
 import 'package:natproxy/screens/client_screen.dart';
 import 'package:natproxy/screens/client_settings_screen.dart';
@@ -23,10 +24,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CDN-NETSHARE',
-      theme: AppTheme.light(),
+      theme: AppTheme.dark(),
       home: const AuthGate(),
       routes: {
         '/sign-up': (context) => const SignUpScreen(),
+        '/resend-verification': (context) => const ResendVerificationScreen(),
         '/account': (context) => const AccountScreen(),
         '/server': (context) => const ServerScreen(),
         '/client': (context) => const ClientScreen(),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:natproxy/widgets/app_background.dart';
 import 'package:natproxy/config/supabase_config.dart';
 import 'package:natproxy/models/profile.dart';
 import 'package:natproxy/services/profile_service.dart';
@@ -220,6 +221,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ],
         ),
       ),
+        ),
+      ),
     );
   }
 
@@ -229,8 +232,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final expires = _profile?.planExpiresAt;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Plans')),
-      body: SafeArea(
+      body: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(title: const Text('Plans')),
+          body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
