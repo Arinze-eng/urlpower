@@ -589,10 +589,7 @@ func StartServer(settingsJSON string) (string, error) {
 	}
 	applog.Info("Generated UDP obfuscation key for WebRTC path (AES-256-GCM)")
 
-	sessionID := offer.SessionID
-	if sessionID == "" {
-		sessionID = generateUUID()
-	}
+	sessionID := generateUUID()
 	applog.Infof("Holepunch session ID: %s", sessionID)
 
 	// Derive UDP relay address from signaling server for NAT fallback
